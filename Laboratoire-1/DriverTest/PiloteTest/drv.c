@@ -1,4 +1,5 @@
 #include "drv.h"
+#include "ioctlcmd.h"
 
 MODULE_AUTHOR("Bruno De Lafontaine");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -82,11 +83,40 @@ static int module_release(struct inode *inode, struct file *filp) {
    return 0;
 }
 
+static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
+	int retval=0;;
+	if(_IOC_TYPE(cmd) != SERIAL_MAGIC_NUM){
+		return -ENOTTY;
+	}
+	if(_IOC_NR(cmd) < SERIAL_IOC_MAXNUMBER){
+		return -ENOTTY;
+	}
+
+	switch(cmd){
+	
+	case SERIAL_SET_BAUD:
+			break;
+	case SERIAL_SET_DATASIZE:
+			break;
+	case SERIAL_SET_PARITY:
+			break;
+	case SERIAL_SET_BUF_SIZE:
+			break;
+	case SERIAL_GET_BUF_SIZE:
+			break;
+
+	default: return -ENOTTY;
+
+	}
+
+	return retval;
+}
+
 
 static int __init pilote_init (void) {
 	int result=0;
-	//int i=0;
-	//char * buf="etsele_cdev";
+	int i=0;
+	char buf[15];
 	result=alloc_chrdev_region(&device.dev, DEV_MINOR, DEV_MINOR_LAST, "MyPilote");
   	if (result < 0) {
     		printk(KERN_WARNING "ELE784_DRIVER can't get major %d\n", result);
@@ -95,14 +125,12 @@ static int __init pilote_init (void) {
 	}
 
    	device.cclass = class_create(THIS_MODULE, "moduleTest");
-/*
+
 	for (i=0;i<DEV_MINOR_LAST;i++){
-		itoa(i, "%d",i);
+		sprintf(buf, "etsele_cdev%d",i);
 		printk(KERN_WARNING"buf : %s)\n", buf);
 		device_create(device.cclass, NULL, device.dev+i, NULL, buf);
-	}*/
-   	device_create(device.cclass, NULL, device.dev, NULL, "etsele_cdev0");
- 	device_create(device.cclass, NULL, device.dev+1, NULL, "etsele_cdev1");
+	}
 
    	cdev_init(&device.mycdev, &myModule_fops);
    	cdev_add(&device.mycdev, device.dev, DEV_MINOR_LAST);

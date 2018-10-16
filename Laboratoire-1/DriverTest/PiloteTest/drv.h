@@ -19,6 +19,7 @@
 #include "circbuf.h"
 
 
+
 #define DEV_MINOR 0x00
 #define DEV_MINOR_LAST 0x02
 
@@ -41,13 +42,17 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 static int module_open(struct inode *inode, struct file *filp);
 static int module_release(struct inode *inode, struct file *filp);
 
+// ioctl
+static ssize_t module_ioctl ( struct file *filp, unsigned int cmd, unsigned long args);
+
 
 struct file_operations myModule_fops = {
-	.owner 	 = THIS_MODULE,
-	.write	 = module_write,
-	.read	 = module_read,
-	.open	 = module_open,
-	.release = module_release,
+	.owner 	 	= THIS_MODULE,
+	.write	 	= module_write,
+	.read	 	= module_read,
+	.open	 	= module_open,
+	.release 	= module_release,
+	.unlocked_ioctl		= module_ioctl,
 };
 
 
