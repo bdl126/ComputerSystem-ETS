@@ -11,15 +11,11 @@ rbuf roundbuf;
 
 myModuleTag device;
 
-char  Tab[10];
-
-
-
 static ssize_t module_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
 	int i=0;	
-
+	char  Tab[10];
 	for(i=0;i<count;i++){
-		if(-1==readRoundbuff(&Tab[i],&roundbuf)){
+		if(readRoundbuff(&Tab[i],&roundbuf)<0){
 			return -EFAULT;
 		};
 	}
@@ -31,6 +27,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 
 static ssize_t module_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 	int i=0;
+	char  Tab[10];
 	raw_copy_from_user(Tab, buf, count);
 	for(i=0;i<count;i++){
 		if(writeRoundbuff(Tab[i],&roundbuf)==-1){

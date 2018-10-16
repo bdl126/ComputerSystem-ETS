@@ -25,7 +25,7 @@ int main(void) {
 	int ret=0;
 	char choix='c';
 	char Buffout[5]="Bruno";
-	char Buffin[5];
+	char *Buffin;
 
 	printf("h:help\n");
 	printf("w:write\n");
@@ -46,8 +46,9 @@ int main(void) {
 							write(fd,&Buffout,5);
 							break;
 						case 'r':
+							Buffin=NULL;
 							read(fd,&Buffin,5);
-							printf ("%s\n",&Buffin);
+							printf (":%s\n",&Buffin);
 							break;
 						case 's':
 							printf ("enter message:");
