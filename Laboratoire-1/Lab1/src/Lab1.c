@@ -17,12 +17,22 @@
 
 char *Device="/dev/etsele_cdev0";
 int main(void) {
+
+
+
 	int fd;
 	int n=0;
 	int ret=0;
 	char choix='c';
 	char Buffout[5]="Bruno";
 	char Buffin[5];
+
+	printf("h:help\n");
+	printf("w:write\n");
+	printf("r:read\n");
+	printf("s:set message\n");
+	printf("q:quit\n");
+
 	fd=open(Device,O_RDWR);
 
 	if(fd<0){
@@ -34,17 +44,14 @@ int main(void) {
 		{
 						case 'w':
 							write(fd,&Buffout,5);
-							choix=' ';
 							break;
 						case 'r':
 							read(fd,&Buffin,5);
 							printf ("%s\n",&Buffin);
-							choix=' ';
 							break;
 						case 's':
 							printf ("enter message:");
 							scanf("%s\n",&Buffout);
-							choix=' ';
 							break;
 						case 'h':
 							printf("h:help\n");
@@ -52,10 +59,11 @@ int main(void) {
 							printf("r:read\n");
 							printf("s:set message\n");
 							printf("q:quit\n");
-							choix=' ';
 							break;
-						default:choix=getchar();
+						default:
+								break;
 		}
+		choix=getchar();
 	}
 
 

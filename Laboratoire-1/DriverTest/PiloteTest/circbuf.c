@@ -30,6 +30,8 @@ extern int  writeRoundbuff (char x,rbuf *roundbf){
 EXPORT_SYMBOL_GPL(writeRoundbuff);
 
 extern int  readRoundbuff (char *x,rbuf *roundbf){
+	printk(KERN_WARNING"roundbf->idOut:%d\n",roundbf->idOut);
+	printk(KERN_WARNING"roundbf->idin:%d\n",roundbf->idIn);
 
 	if(roundbf->bufferEmpty){
 		return -1;
