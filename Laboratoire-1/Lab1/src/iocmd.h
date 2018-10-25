@@ -1,10 +1,18 @@
+/*
+ * iocmd.h
+ *
+ *  Created on: Oct 25, 2018
+ *      Author: AM98710
+ */
 
+#ifndef IOCMD_H_
+#define IOCMD_H_
 
 #include <linux/ioctl.h>
 
 #define SERIAL_MAGIC_NUM 'B'
 
-#define SERIAL_SET_BAUD		_IOW(SERIAL_MAGIC_NUM, 0 ,int) 	//50 A 115200 
+#define SERIAL_SET_BAUD		_IOW(SERIAL_MAGIC_NUM, 0 ,int) 	//50 A 115200
 
 #define SERIAL_SET_DATASIZE	_IOW(SERIAL_MAGIC_NUM, 1 ,int) 	//5 A 8 BIT
 
@@ -18,3 +26,7 @@
 
 #define SERIAL_IOC_MAXNUMBER		10
 
+
+
+
+#endif /* IOCMD_H_ */

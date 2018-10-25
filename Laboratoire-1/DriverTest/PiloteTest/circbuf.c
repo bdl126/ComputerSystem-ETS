@@ -24,6 +24,9 @@ extern int  writeRoundbuff (char x,rbuf *roundbf){
 	if(roundbf->idIn==roundbf->idOut){
 		roundbf->bufferFull=1;
 	}
+	printk(KERN_WARNING"roundbf->idOut:%d\n",roundbf->idOut);
+	printk(KERN_WARNING"roundbf->idin:%d\n",roundbf->idIn);
+
 	return 0 ;
 }
 
