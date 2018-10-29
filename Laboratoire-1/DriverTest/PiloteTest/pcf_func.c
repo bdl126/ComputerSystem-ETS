@@ -6,14 +6,14 @@ extern unsigned int set_datasize(unsigned long size){
 	data=ioread8(&(SerialPCF->LCR_REG));
 	switch(size){
 		case 5:
-			data = data & (!LCR_WLSH & !LCR_WLSL);
+			data = data & (~LCR_WLSH & ~LCR_WLSL);
 			break;
 		case 6:
-			data = (data & !LCR_WLSH) | LCR_WLSL;
+			data = (data & ~LCR_WLSH) | LCR_WLSL;
 			break;
 
 		case 7:
-			data = (data & !LCR_WLSL) | LCR_WLSH;
+			data = (data & ~LCR_WLSL) | LCR_WLSH;
 			break;
 
 		case 8:
@@ -35,7 +35,9 @@ extern unsigned int set_parity_en(unsigned long state){
 	uint8_t data;
 	data=ioread8(&(SerialPCF->LCR_REG));
 	if(state==0){
-		data = data & !LCR_PEN;
+		printk(KERN_WARNING "data before: %d\n", data);
+		data = data & ~LCR_PEN;
+		printk(KERN_WARNING "data after: %d\n", data);
 	}
 	else if(state==1){
 		data = data | LCR_PEN;
@@ -52,7 +54,7 @@ extern unsigned int set_parity_sel(unsigned long type){
 	uint8_t data;
 	data=ioread8(&(SerialPCF->LCR_REG));
 	if(type==0){
-		data = data & !LCR_EPS;
+		data = data & ~LCR_EPS;
 	}
 	else if(type==1){
 		data = data | LCR_EPS;
@@ -96,7 +98,7 @@ extern unsigned int set_baudrate(unsigned long baudrate){
 
 	//SET DLAB TO 0
 	data_dlab = ioread8(&(SerialPCF->LCR_REG));
-	data_dlab = data_dlab & !LCR_DLAB;
+	data_dlab = data_dlab & ~LCR_DLAB;
 	iowrite8(data_dlab,&(SerialPCF->LCR_REG));
 	//
 

@@ -1,7 +1,6 @@
 #include "drv.h"
 #include "ioctlcmd.h"
 #include "pcf_func.h"
-//#include <asm/io.h>
 
 MODULE_AUTHOR("Bruno De Lafontaine");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -33,7 +32,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	//printk(KERN_WARNING"Pilote READ 1: (toto:%x)\n",toto);
 	//toto=inb(SerialHardware_Base_Addr+7);
 	//printk(KERN_WARNING"Pilote READ 2: (toto:%x)\n",toto);
-	toto=ioread8(&(SerialPCF->SCR_REG));
+	toto=ioread8(&(SerialPCF->LCR_REG));
 	//toto=SerialPCF->SCR_REG;
 	raw_copy_to_user(buf, &toto, count);
 	/*if((err=raw_copy_to_user(buf, &toto, count))){
@@ -47,7 +46,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	__put_user(&SerialPCF->SCR_REG,buf);*/
 
 	//printk(KERN_WARNING"Pilote READ 3: (toto:0x%x)\n",SerialPCF->SCR_REG);
-	printk(KERN_WARNING"Pilote READ : Hello, world\n");
+	printk(KERN_WARNING"Pilote READ : Hello, world : toto: 0x%x\n",toto);
    return 0;
 }
 
@@ -63,7 +62,7 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 	//printk(KERN_WARNING"Pilote write 1: (toto:0x%x)\n",SerialPCF->SCR_REG);
 	raw_copy_from_user(&toto, buf, count);
 	//SerialPCF->SCR_REG=toto;
-	iowrite8(toto,&(SerialPCF->SCR_REG));
+	iowrite8(toto,&(SerialPCF->LCR_REG));
 	//printk(KERN_WARNING"Pilote write 2: (toto:0x%x)\n",SerialPCF->SCR_REG);
 
 	/*if((err=access_ok(VERIFY_READ,buf,count))){
@@ -93,6 +92,8 @@ static int module_open(struct inode *inode, struct file *filp) {
 //  filp.private_data = &myModuleStruct;
 
 //verification du nombre de user
+   printk(KERN_WARNING"Pilote OPEN : filp->f_path.dentry->d_iname %s\n",filp->f_path.dentry->d_iname);
+
 	if(WRMOD==1){
 		return -(ENOTTY);
 	}
@@ -109,8 +110,6 @@ static int module_open(struct inode *inode, struct file *filp) {
 	if((filp->f_flags & O_ACCMODE)==O_RDONLY){
 		RDMOD=1;
 	}
-
-   printk(KERN_WARNING"Pilote OPEN : filp->f_path.dentry->d_iname %s\n",filp->f_path.dentry->d_iname);
    return 0;
 }
 
@@ -144,11 +143,20 @@ static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	switch(cmd){
 	
 	case SERIAL_SET_BAUD:
+			set_baudrate(args);
+			printk(KERN_WARNING "SERIAL_SET_BAUD: %ld\n", args);
 			break;
 	case SERIAL_SET_DATASIZE:
+			set_datasize(args);
+			printk(KERN_WARNING "SERIAL_SET_DATASIZE: %ld\n", args);
 			break;
-	case SERIAL_SET_PARITY:
-    		printk(KERN_WARNING "SERIAL_SET_PARITY: %ld\n", args);
+	case SERIAL_SET_PARITY_EN:
+			set_parity_en(args);
+			printk(KERN_WARNING "SERIAL_SET_PARITY_EN: %ld\n", args);
+			break;
+	case SERIAL_SET_PARITY_SEL:
+			set_parity_sel(args);
+    			printk(KERN_WARNING "SERIAL_SET_PARITY: %ld\n", args);
 			break;
 	case SERIAL_SET_BUF_SIZE:
 			break;
@@ -186,10 +194,10 @@ static int __init pilote_init (void) {
    	cdev_init(&device.mycdev, &myModule_fops);
    	cdev_add(&device.mycdev, device.dev, DEV_MINOR_LAST);
 	
-	/*if(request_region(SerialHardware_Base_Addr,Number_of_Reg,"SerialPCF16550")==NULL) {
+	if(request_region(SerialHardware_Base_Addr,Number_of_Reg,"SerialPCF16550")==NULL) {
 		return -ENOTTY;
 	}
-	SerialPCF=ioport_map(SerialHardware_Base_Addr,Number_of_Reg);*/
+	SerialPCF=ioport_map(SerialHardware_Base_Addr,Number_of_Reg);
    	initRoundbuff(8,&roundbuf);
 	
 	
