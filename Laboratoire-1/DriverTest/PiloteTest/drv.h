@@ -23,17 +23,20 @@
 #define DEV_MINOR 0x00
 #define DEV_MINOR_LAST 0x02
 
-int PiloteVar = 12;
+//int PiloteVar = 12;
 int WRMOD=0;
 int RDMOD=0;
-module_param(PiloteVar, int, S_IRUGO);
-EXPORT_SYMBOL_GPL(PiloteVar);
+//module_param(PiloteVar, int, S_IRUGO);
+//EXPORT_SYMBOL_GPL(PiloteVar);
 
 typedef struct  {
 int  flags;
 dev_t dev;
 struct class *cclass;
 struct cdev  mycdev;
+//rbuf roundTXbuf;
+//rbuf roundRXbuf;
+
 }myModuleTag;
 
 //access

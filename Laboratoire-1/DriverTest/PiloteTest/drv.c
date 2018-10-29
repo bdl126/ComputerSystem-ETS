@@ -1,7 +1,7 @@
 #include "drv.h"
 #include "ioctlcmd.h"
-#include "hw.h"
-#include <asm/io.h>
+#include "pcf_func.h"
+//#include <asm/io.h>
 
 MODULE_AUTHOR("Bruno De Lafontaine");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -12,7 +12,6 @@ extern int readRoundbuff(char *, rbuf*);
 rbuf roundbuf;
 
 Serial_reg * SerialPCF;
-Serial_reg Serialtoto;
 myModuleTag device;
 
 static ssize_t module_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
@@ -111,7 +110,7 @@ static int module_open(struct inode *inode, struct file *filp) {
 		RDMOD=1;
 	}
 
-   printk(KERN_WARNING"Pilote OPEN : Hello, world\n");
+   printk(KERN_WARNING"Pilote OPEN : filp->f_path.dentry->d_iname %s\n",filp->f_path.dentry->d_iname);
    return 0;
 }
 
@@ -187,14 +186,14 @@ static int __init pilote_init (void) {
    	cdev_init(&device.mycdev, &myModule_fops);
    	cdev_add(&device.mycdev, device.dev, DEV_MINOR_LAST);
 	
-	if(request_region(SerialHardware_Base_Addr,Number_of_Reg,"SerialPCF16550")==NULL) {
+	/*if(request_region(SerialHardware_Base_Addr,Number_of_Reg,"SerialPCF16550")==NULL) {
 		return -ENOTTY;
 	}
-	SerialPCF=ioport_map(SerialHardware_Base_Addr,Number_of_Reg);
+	SerialPCF=ioport_map(SerialHardware_Base_Addr,Number_of_Reg);*/
    	initRoundbuff(8,&roundbuf);
 	
 	
-   	printk(KERN_WARNING"Pilote : Hello, world (Pilote : %u)\n", PiloteVar);
+   	printk(KERN_WARNING"Pilote : Hello, world\n");
   	return 0;
 }
 

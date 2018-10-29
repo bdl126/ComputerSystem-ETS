@@ -1,7 +1,7 @@
 #ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 
-serial-objs	:= drv.o circbuf.o
+serial-objs	:= drv.o circbuf.o pcf_func.o
 obj-m		:= serial.o
 
 

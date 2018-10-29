@@ -13,7 +13,7 @@ typedef struct {
 extern int  writeRoundbuff (char x, rbuf*);
 extern int  readRoundbuff (char *x, rbuf*); 
 extern int  initRoundbuff (unsigned int size, rbuf*);
-
+//extern int resizeBuff (unsigned int newSize, rbuf *roundbf);
 
 
 
