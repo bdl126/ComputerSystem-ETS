@@ -1,3 +1,7 @@
+
+#ifndef DRV_H
+#define DRV_H
+
 #include <generated/autoconf.h>
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -9,6 +13,7 @@
 
 #include <linux/string.h>
 #include <linux/syscalls.h>
+#include <linux/slab.h> 
 #include <linux/types.h>
 #include <linux/stat.h> 
 
@@ -16,28 +21,14 @@
 #include <linux/kthread.h>
 #include <linux/cdev.h>
 
-#include "circbuf.h"
-
-
+#include "pcf_func.h"
 
 #define DEV_MINOR 0x00
 #define DEV_MINOR_LAST 0x02
 
-//int PiloteVar = 12;
-int WRMOD=0;
-int RDMOD=0;
-//module_param(PiloteVar, int, S_IRUGO);
-//EXPORT_SYMBOL_GPL(PiloteVar);
+const char DEV_BASE_NAME[]="etsele_cdev";
 
-typedef struct  {
-int  flags;
-dev_t dev;
-struct class *cclass;
-struct cdev  mycdev;
-//rbuf roundTXbuf;
-//rbuf roundRXbuf;
 
-}myModuleTag;
 
 //access
 static ssize_t module_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
@@ -55,7 +46,7 @@ struct file_operations myModule_fops = {
 	.read	 	= module_read,
 	.open	 	= module_open,
 	.release 	= module_release,
-	.unlocked_ioctl		= module_ioctl,
+	.unlocked_ioctl	= module_ioctl,
 };
 
 
@@ -65,3 +56,5 @@ static void pilote_exit (void);
 
 module_init(pilote_init);
 module_exit(pilote_exit);
+
+#endif /* DRV_H */

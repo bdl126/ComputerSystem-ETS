@@ -1,4 +1,6 @@
 
+#ifndef IOCTLCMD_H
+#define IOCTLCMD_H
 
 #include <linux/ioctl.h>
 
@@ -16,7 +18,10 @@
 
 #define SERIAL_SET_BUF_SIZE	_IOW(SERIAL_MAGIC_NUM, 4 ,int)	//
 #define SERIAL_GET_BUF_SIZE	_IOR(SERIAL_MAGIC_NUM, 5 ,int)
+#define SERIAL_SET_FIFO		_IOW(SERIAL_MAGIC_NUM, 6 ,int)
 
 
 #define SERIAL_IOC_MAXNUMBER		10
 
+
+#endif /* IOCTLCMD_H */

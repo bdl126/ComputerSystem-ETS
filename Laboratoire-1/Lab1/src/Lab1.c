@@ -152,6 +152,20 @@ int main(void) {
 				case 'e':
 					currentstate=menu_msg;
 					break;
+				case 'z':
+					printf ("enter desired buf size:");
+					scanf("%ld\n\n",&io_args);
+					ioctl(fd,SERIAL_SET_BUF_SIZE,io_args);
+					break;
+				case 'g':
+					io_args=ioctl(fd,SERIAL_GET_BUF_SIZE);
+					printf("SERIAL_GET_BUF_SIZE:%ld\n\n",io_args);
+					break;
+				case 'F':
+					printf ("enter desired fifo size:");
+					scanf("%ld\n\n",&io_args);
+					ioctl(fd,SERIAL_SET_FIFO,io_args);
+					break;
 
 				case 'h':
 					printf("\nb:change baudrate of Device\n");

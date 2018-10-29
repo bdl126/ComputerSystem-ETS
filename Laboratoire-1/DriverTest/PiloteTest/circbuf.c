@@ -48,21 +48,34 @@ extern int  readRoundbuff (char *x,rbuf *roundbf){
 	return 0 ;
 }
 EXPORT_SYMBOL_GPL(readRoundbuff);
-/*
+
+
 extern int resizeBuff (unsigned int newSize, rbuf *roundbf){
 
-	roundbf->buffer_data = krealloc(() roundbf->buffer_data,sizeof(char)*newSize, GFP_KERNEL);
+	roundbf->buffer_data = krealloc(roundbf->buffer_data,sizeof(char)*newSize, GFP_KERNEL);
 	roundbf->bufferSize = newSize;
 	return 0;
 }
 
 
 
+extern unsigned int get_bufsize(rbuf * roundbuf){
 
-EXPORT_SYMBOL_GPL(resizeBuff);
+	return roundbuf->bufferSize;
+}
 
 
-*/
+extern unsigned int set_bufsize(rbuf * roundbuf, unsigned int newSize){
+
+	resizeBuff(newSize,roundbuf);
+	return 0;
+}
+
+
+
+
+
+
 
 
 

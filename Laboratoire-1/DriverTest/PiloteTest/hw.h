@@ -1,7 +1,12 @@
+#ifndef HW_H
+#define HW_H
 
-#define SerialHardware_Base_Addr	0xc030//0xc020
 
-#define SerialHardware_IRQ_Addr		0x20//0x21
+#define SerialHardware_Base_Addr0	0xc030
+#define SerialHardware_Base_Addr1	0xc020
+
+#define SerialHardware_IRQ_Addr0	0x20
+#define SerialHardware_IRQ_Addr1	0x21
 
 
 #define Number_of_Reg			0x08
@@ -48,5 +53,5 @@ typedef struct {
 	uint8_t	SCR_REG;
 }Serial_reg;
 
-
+#endif /* HW_H */
 

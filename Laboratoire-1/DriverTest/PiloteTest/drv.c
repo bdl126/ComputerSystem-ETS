@@ -1,20 +1,14 @@
 #include "drv.h"
 #include "ioctlcmd.h"
-#include "pcf_func.h"
 
 MODULE_AUTHOR("Bruno De Lafontaine");
 MODULE_LICENSE("Dual BSD/GPL");
 
-extern int initRoundbuff(unsigned int, rbuf* );
-extern int writeRoundbuff(char, rbuf*);
-extern int readRoundbuff(char *, rbuf*);
-rbuf roundbuf;
-
-Serial_reg * SerialPCF;
 myModuleTag device;
 
 static ssize_t module_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
-	uint8_t err=0;
+	int minor_number=iminor(filp->f_path.dentry->d_inode);
+	//uint8_t err=0;
 	uint8_t toto=0;
 /*	int i=0;	
 	char  Tab[10];
@@ -32,7 +26,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	//printk(KERN_WARNING"Pilote READ 1: (toto:%x)\n",toto);
 	//toto=inb(SerialHardware_Base_Addr+7);
 	//printk(KERN_WARNING"Pilote READ 2: (toto:%x)\n",toto);
-	toto=ioread8(&(SerialPCF->LCR_REG));
+	toto=ioread8(&(device.SerialPCF[minor_number]->LCR_REG));
 	//toto=SerialPCF->SCR_REG;
 	raw_copy_to_user(buf, &toto, count);
 	/*if((err=raw_copy_to_user(buf, &toto, count))){
@@ -51,9 +45,10 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 }
 
 static ssize_t module_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
+	int minor_number=iminor(filp->f_path.dentry->d_inode);
 //	int i=0;
-	//char  Tab[10];
-	uint8_t err=0;
+	char  Tab[10];
+	//uint8_t err=0;
 	uint8_t toto=0;
 	/*if((err=raw_copy_from_user(&toto, buf, count))){
 		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
@@ -62,7 +57,7 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 	//printk(KERN_WARNING"Pilote write 1: (toto:0x%x)\n",SerialPCF->SCR_REG);
 	raw_copy_from_user(&toto, buf, count);
 	//SerialPCF->SCR_REG=toto;
-	iowrite8(toto,&(SerialPCF->LCR_REG));
+	iowrite8(toto,&(device.SerialPCF[minor_number]->LCR_REG));
 	//printk(KERN_WARNING"Pilote write 2: (toto:0x%x)\n",SerialPCF->SCR_REG);
 
 	/*if((err=access_ok(VERIFY_READ,buf,count))){
@@ -89,41 +84,42 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 }
 
 static int module_open(struct inode *inode, struct file *filp) {
-//  filp.private_data = &myModuleStruct;
 
-//verification du nombre de user
-   printk(KERN_WARNING"Pilote OPEN : filp->f_path.dentry->d_iname %s\n",filp->f_path.dentry->d_iname);
+	int minor_number=iminor(filp->f_path.dentry->d_inode);
 
-	if(WRMOD==1){
+	//verification du nombre de user
+	if(device.wr_mod[minor_number]==1){
 		return -(ENOTTY);
 	}
-	if(RDMOD==1){
+	if(device.rd_mod[minor_number]==1){
 		return -(ENOTTY);
 	}
 	if((filp->f_flags & O_ACCMODE)==O_WRONLY){
-		WRMOD=1;
+		device.wr_mod[minor_number]=1;
 	}
 	if((filp->f_flags & O_ACCMODE)==O_RDWR){
-		RDMOD=RDMOD+1;
-		WRMOD=1;
+		device.rd_mod[minor_number]=device.rd_mod[minor_number]+1;
+		device.wr_mod[minor_number]=1;
 	}
 	if((filp->f_flags & O_ACCMODE)==O_RDONLY){
-		RDMOD=1;
+		device.rd_mod[minor_number]=1;
 	}
    return 0;
 }
 
 static int module_release(struct inode *inode, struct file *filp) {
 
+	int minor_number=iminor(filp->f_path.dentry->d_inode);
+
 	if((filp->f_flags & O_ACCMODE)==O_WRONLY){
-		WRMOD=0;
+		device.wr_mod[minor_number]=0;
 	}
 	if((filp->f_flags & O_ACCMODE)==O_RDWR){
-		RDMOD=0;
-		WRMOD=0;
+		device.rd_mod[minor_number]=0;
+		device.wr_mod[minor_number]=0;
 	}
 	if((filp->f_flags & O_ACCMODE)==O_RDONLY){
-		RDMOD=0;
+		device.rd_mod[minor_number]=0;
 	}
 
    printk(KERN_WARNING"Pilote RELEASE : Hello, world\n");
@@ -132,6 +128,9 @@ static int module_release(struct inode *inode, struct file *filp) {
 
 static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 	int retval=0;
+	int minor_number=iminor(filp->f_path.dentry->d_inode);
+	printk(KERN_WARNING"minor_number:%d",minor_number);
+
 	if(_IOC_TYPE(cmd) != SERIAL_MAGIC_NUM){
 		printk(KERN_WARNING"error serial magic num");
 		return -ENOTTY;
@@ -143,26 +142,34 @@ static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	switch(cmd){
 	
 	case SERIAL_SET_BAUD:
-			set_baudrate(args);
-			printk(KERN_WARNING "SERIAL_SET_BAUD: %ld\n", args);
+			set_baudrate(args, &device, minor_number);
+			printk(KERN_WARNING"SERIAL_SET_BAUD: %ld\n", args);
 			break;
 	case SERIAL_SET_DATASIZE:
-			set_datasize(args);
-			printk(KERN_WARNING "SERIAL_SET_DATASIZE: %ld\n", args);
+			set_datasize(args, &device, minor_number);
+			printk(KERN_WARNING"SERIAL_SET_DATASIZE: %ld\n", args);
 			break;
 	case SERIAL_SET_PARITY_EN:
-			set_parity_en(args);
-			printk(KERN_WARNING "SERIAL_SET_PARITY_EN: %ld\n", args);
+			set_parity_en(args, &device, minor_number);
+			printk(KERN_WARNING"SERIAL_SET_PARITY_EN: %ld\n", args);
 			break;
 	case SERIAL_SET_PARITY_SEL:
-			set_parity_sel(args);
-    			printk(KERN_WARNING "SERIAL_SET_PARITY: %ld\n", args);
+			set_parity_sel(args, &device, minor_number);
+    			printk(KERN_WARNING"SERIAL_SET_PARITY: %ld\n", args);
 			break;
 	case SERIAL_SET_BUF_SIZE:
+			set_bufsize(&(device.roundTXbuf[minor_number]), args);
+			set_bufsize(&(device.roundRXbuf[minor_number]), args);
+			printk(KERN_WARNING"SERIAL_SET_PARITY_EN: %ld\n", args);
 			break;
 	case SERIAL_GET_BUF_SIZE:
+			retval=get_bufsize(&(device.roundTXbuf[minor_number]));
+			printk(KERN_WARNING"SERIAL_GET_BUF_SIZE: %d\n", retval);
 			break;
-
+	case SERIAL_SET_FIFO:
+			set_fifo(args,&device,minor_number);
+			printk(KERN_WARNING"SERIAL_SET_FIFO: %ld\n", args);
+			break;
 	default: 
 		return -ENOTTY;
 
@@ -185,20 +192,31 @@ static int __init pilote_init (void) {
 
    	device.cclass = class_create(THIS_MODULE, "moduleTest");
 
+	if(request_region(SerialHardware_Base_Addr0,Number_of_Reg,"SerialPCF16550")==NULL) {
+		return -ENOTTY;
+	}
+	if(request_region(SerialHardware_Base_Addr1,Number_of_Reg,"SerialPCF16550")==NULL) {
+		return -ENOTTY;
+	}
+	device.SerialPCF[0]=ioport_map(SerialHardware_Base_Addr0,Number_of_Reg);
+	device.SerialPCF[1]=ioport_map(SerialHardware_Base_Addr1,Number_of_Reg);
+
 	for (i=0;i<DEV_MINOR_LAST;i++){
-		sprintf(buf, "etsele_cdev%d",i);
+		sprintf(buf, "%s%d",DEV_BASE_NAME,i);
 		printk(KERN_WARNING"buf : %s\n", buf);
 		device_create(device.cclass, NULL, device.dev+i, NULL, buf);
+
+		initRoundbuff(8,&(device.roundTXbuf[i]));
+	   	initRoundbuff(8,&(device.roundRXbuf[i]));
+		init_waitqueue_head(&(device.dev_queue[i]));
+		spin_lock_init(&(device.dev_slock[i]));
+		device.wr_mod[i]=0;
+		device.rd_mod[i]=0;
+
 	}
 
    	cdev_init(&device.mycdev, &myModule_fops);
    	cdev_add(&device.mycdev, device.dev, DEV_MINOR_LAST);
-	
-	if(request_region(SerialHardware_Base_Addr,Number_of_Reg,"SerialPCF16550")==NULL) {
-		return -ENOTTY;
-	}
-	SerialPCF=ioport_map(SerialHardware_Base_Addr,Number_of_Reg);
-   	initRoundbuff(8,&roundbuf);
 	
 	
    	printk(KERN_WARNING"Pilote : Hello, world\n");
@@ -210,9 +228,17 @@ static int __init pilote_init (void) {
 static void __exit pilote_exit (void) {
 	// inverse de init
 	int i =0;
-	kfree(roundbuf.buffer_data);
-	ioport_unmap(&SerialPCF);
-	release_region(SerialHardware_Base_Addr,Number_of_Reg);
+	kfree(device.roundTXbuf[0].buffer_data);
+	kfree(device.roundTXbuf[1].buffer_data);
+	kfree(device.roundRXbuf[0].buffer_data);
+	kfree(device.roundRXbuf[1].buffer_data);
+
+	ioport_unmap(&(device.SerialPCF[0]));
+	ioport_unmap(&(device.SerialPCF[1]));
+
+	release_region(SerialHardware_Base_Addr0,Number_of_Reg);
+	release_region(SerialHardware_Base_Addr1,Number_of_Reg);
+
 	cdev_del(&device.mycdev);
 	for (i=0;i<DEV_MINOR_LAST;i++){
 		device_destroy(device.cclass, device.dev+i);

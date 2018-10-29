@@ -1,3 +1,6 @@
+#ifndef CIRCBUF_H
+#define CIRCBUF_H
+
 #include <linux/slab.h> 
 
 typedef struct { 
@@ -13,8 +16,10 @@ typedef struct {
 extern int  writeRoundbuff (char x, rbuf*);
 extern int  readRoundbuff (char *x, rbuf*); 
 extern int  initRoundbuff (unsigned int size, rbuf*);
-//extern int resizeBuff (unsigned int newSize, rbuf *roundbf);
+extern unsigned int get_bufsize(rbuf * roundbuf);
+extern unsigned int set_bufsize(rbuf * roundbuf, unsigned int newSize);
+extern int resizeBuff (unsigned int newSize, rbuf *roundbf);
 
 
-
+#endif /* CIRCBUF_H */
 
