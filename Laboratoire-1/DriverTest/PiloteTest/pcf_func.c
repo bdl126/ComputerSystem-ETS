@@ -1,10 +1,10 @@
 
 #include "pcf_func.h"
 
-extern unsigned int set_datasize(unsigned long size, myModuleTag * device, int minor_number){
+extern unsigned int set_datasize(unsigned long size, myModuleTag * device){
 	uint8_t data;
 	
-	data=ioread8(&(device->SerialPCF[minor_number]->LCR_REG));
+	data=ioread8(&(device->SerialPCF->LCR_REG));
 	switch(size){
 		case 5:
 			data = data & (~LCR_WLSH & ~LCR_WLSL);
@@ -24,16 +24,16 @@ extern unsigned int set_datasize(unsigned long size, myModuleTag * device, int m
 			return -EOVERFLOW;
 			break;
 	}
-	iowrite8(data,&(device->SerialPCF[minor_number]->LCR_REG));
+	iowrite8(data,&(device->SerialPCF->LCR_REG));
 	
 	return 0;
 }
 
 
 
-extern unsigned int set_parity_en(unsigned long state, myModuleTag * device, int minor_number){
+extern unsigned int set_parity_en(unsigned long state, myModuleTag * device){
 	uint8_t data;
-	data=ioread8(&(device->SerialPCF[minor_number]->LCR_REG));
+	data=ioread8(&(device->SerialPCF->LCR_REG));
 	if(state==0){
 		data = data & ~LCR_PEN;
 	}
@@ -43,14 +43,14 @@ extern unsigned int set_parity_en(unsigned long state, myModuleTag * device, int
 	else{
 		return -EOVERFLOW;
 	}
-	iowrite8(data,&(device->SerialPCF[minor_number]->LCR_REG));
+	iowrite8(data,&(device->SerialPCF->LCR_REG));
 
 	return 0;
 }
 
-extern unsigned int set_parity_sel(unsigned long type, myModuleTag * device, int minor_number){
+extern unsigned int set_parity_sel(unsigned long type, myModuleTag * device){
 	uint8_t data;
-	data=ioread8(&(device->SerialPCF[minor_number]->LCR_REG));
+	data=ioread8(&(device->SerialPCF->LCR_REG));
 	if(type==0){
 		data = data & ~LCR_EPS;
 	}
@@ -60,12 +60,12 @@ extern unsigned int set_parity_sel(unsigned long type, myModuleTag * device, int
 	else{
 		return -EOVERFLOW;
 	}
-	iowrite8(data,&(device->SerialPCF[minor_number]->LCR_REG));
+	iowrite8(data,&(device->SerialPCF->LCR_REG));
 
 	return 0;
 }
 
-extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device, int minor_number){
+extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device){
 	uint8_t data_dlab;
 	uint8_t data_low;
 	uint8_t data_high;
@@ -76,9 +76,9 @@ extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device, i
 	if((49 < baudrate) && (baudrate < 115201) ){
 
 		//SET DLAB TO 1
-		data_dlab = ioread8(&(device->SerialPCF[minor_number]->LCR_REG));
+		data_dlab = ioread8(&(device->SerialPCF->LCR_REG));
 		data_dlab = data_dlab | LCR_DLAB;
-		iowrite8(data_dlab,&(device->SerialPCF[minor_number]->LCR_REG));
+		iowrite8(data_dlab,&(device->SerialPCF->LCR_REG));
 		//
 		temp=(F_CLK_CST/baudrate);
 		data_low=(uint8_t)(temp & 0x00FF);
@@ -90,25 +90,25 @@ extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device, i
 	//
 
 	// WRITE DLL AND DLM VALUE	
-	iowrite8(data_low,&(device->SerialPCF[minor_number]->RBR_THR_DLL_REG));
-	iowrite8(data_high,&(device->SerialPCF[minor_number]->IER_DLM_REG));
+	iowrite8(data_low,&(device->SerialPCF->RBR_THR_DLL_REG));
+	iowrite8(data_high,&(device->SerialPCF->IER_DLM_REG));
 	//
 
 	//SET DLAB TO 0
-	data_dlab = ioread8(&(device->SerialPCF[minor_number]->LCR_REG));
+	data_dlab = ioread8(&(device->SerialPCF->LCR_REG));
 	data_dlab = data_dlab & ~LCR_DLAB;
-	iowrite8(data_dlab,&(device->SerialPCF[minor_number]->LCR_REG));
+	iowrite8(data_dlab,&(device->SerialPCF->LCR_REG));
 	//
 
 
 	return 0;
 }
-extern unsigned int set_fifo(unsigned long depth, myModuleTag * device, int minor_number){
+extern unsigned int set_fifo(unsigned long depth, myModuleTag * device){
 	uint8_t data;
 	//enable fifo before changing it's depth
-	data=ioread8(&(device->SerialPCF[minor_number]->FCR_IIR_REG));
+	data=ioread8(&(device->SerialPCF->FCR_IIR_REG));
 	data = data | FCR_FIFOEN;
-	iowrite8(data,&(device->SerialPCF[minor_number]->FCR_IIR_REG));
+	iowrite8(data,&(device->SerialPCF->FCR_IIR_REG));
 
 	switch(depth){
 	case 1:
@@ -129,32 +129,19 @@ extern unsigned int set_fifo(unsigned long depth, myModuleTag * device, int mino
 		return -EOVERFLOW;
 		break;
 	}
-	iowrite8(data,&(device->SerialPCF[minor_number]->FCR_IIR_REG));
+	iowrite8(data,&(device->SerialPCF->FCR_IIR_REG));
 
 	return 0;
 }
 
 
 
-
-irqreturn_t my_interrupt(int irq, void *device){
-
-	if(irq== SerialHardware_IRQ_Addr0)
-	{
-		
-	}
-	else if (irq== SerialHardware_IRQ_Addr0)
-	{
-
-
-
-	} 
-	else
-	{
-	return IRQ_NONE;
-	}
-
+/*
+irqreturn_t my_interrupt_dev(int irq, void *device){
 
 
 	return IRQ_HANDLED;
-}
+}*/
+
+
+
