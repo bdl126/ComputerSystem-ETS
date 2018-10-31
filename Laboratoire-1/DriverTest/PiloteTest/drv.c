@@ -87,7 +87,7 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 static int module_open(struct inode *inode, struct file *filp) {
 
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
-
+	int interrupt_state=1;
 	//verification du nombre de user
 	if(device[minor_number].wr_mod==1){
 		return -(ENOTTY);
@@ -106,13 +106,8 @@ static int module_open(struct inode *inode, struct file *filp) {
 		device[minor_number].rd_mod=1;
 	}
 	
-/*	if(minor_number==0){
-		local_irq_restore(SerialHardware_IRQ_Addr0);
-	}
-	else if(minor_number==1){
-		local_irq_restore(SerialHardware_IRQ_Addr1);
-	}
-*/
+
+	set_interrup_en(interrupt_state,&(device[minor_number]));
 
    return 0;
 }
@@ -120,7 +115,7 @@ static int module_open(struct inode *inode, struct file *filp) {
 static int module_release(struct inode *inode, struct file *filp) {
 
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
-
+	int interrupt_state=0;
 	if((filp->f_flags & O_ACCMODE)==O_WRONLY){
 		device[minor_number].wr_mod=0;
 	}
@@ -132,13 +127,9 @@ static int module_release(struct inode *inode, struct file *filp) {
 		device[minor_number].rd_mod=0;
 	}
 	
-/*	if(minor_number==0){
-		local_irq_save(SerialHardware_IRQ_Addr0);
-	}
-	else if(minor_number==1){
-		local_irq_save(SerialHardware_IRQ_Addr1);
-	}
-*/
+	set_interrup_en(interrupt_state,&(device[minor_number]));
+
+
 
    printk(KERN_WARNING"Pilote RELEASE : Hello, world\n");
    return 0;
@@ -243,10 +234,10 @@ static int __init pilote_init (void) {
 	if(request_irq(SerialHardware_IRQ_Addr1, my_interrupt_dev, IRQF_SHARED,"MyPilote",&(device[1]))){
 		return -EFAULT;
 	}
-
-	spin_lock_irqsave(device[0].dev_slock,interrupt_flag);
-	spin_lock_irqsave(device[1].dev_slock,interrupt_flag);
-	
+	pfc_init(&(device[0]));
+	pfc_init(&(device[1]));
+	set_interrup_en(0,&(device[0]));
+	set_interrup_en(0,&(device[1]));
 	
    	printk(KERN_WARNING"Pilote : Hello, world\n");
   	return 0;

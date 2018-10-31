@@ -49,15 +49,17 @@ typedef struct  {
 
 //extern myModuleTag device;
 
-//extern unsigned int pfc_init();
 extern unsigned int set_datasize(unsigned long size, myModuleTag * device);
 
 extern unsigned int set_parity_en(unsigned long state, myModuleTag * device);
 extern unsigned int set_parity_sel(unsigned long type, myModuleTag * device);
 extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device);
+extern unsigned int set_interrup_en(unsigned long state, myModuleTag * device);
 
 
 extern unsigned int set_fifo(unsigned long depth, myModuleTag * device);
+extern unsigned int pfc_init(myModuleTag * device);
+
 
 extern irqreturn_t my_interrupt_dev(int irq, void *dev);
 

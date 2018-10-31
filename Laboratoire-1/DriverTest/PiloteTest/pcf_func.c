@@ -134,6 +134,42 @@ extern unsigned int set_fifo(unsigned long depth, myModuleTag * device){
 	return 0;
 }
 
+extern unsigned int set_interrup_en(unsigned long state, myModuleTag * device){
+	uint8_t data;
+	data=ioread8(&(device->SerialPCF->IER_DLM_REG));
+	if(state==0){
+		data = data & ~(IER_ERFBI | IER_ETFBEI);
+	}
+	else if(state==1){
+		data = data | IER_ERFBI | IER_ETFBEI;
+	} 
+	else{
+		return -EOVERFLOW;
+	}
+	iowrite8(data,&(device->SerialPCF->IER_DLM_REG));
+
+	return 0;
+
+
+}
+
+extern unsigned int pfc_init(myModuleTag * device){
+	unsigned long size=8;
+	unsigned long type=0;
+	unsigned long state=1;
+	unsigned long baudrate=9600;
+	unsigned long fifo_depth=1;
+	set_datasize(size,device);
+	set_parity_en(state,device);
+	set_parity_sel(type,device);
+	set_baudrate(baudrate,device);
+	set_fifo(fifo_depth,device);
+	set_interrup_en(state,device);
+
+	return 0;
+}
+
+
 
 irqreturn_t my_interrupt_dev(int irq, void *dev){
 	uint8_t reg_status;
