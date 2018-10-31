@@ -39,6 +39,7 @@ typedef struct  {
 	rbuf roundRXbuf;
 	int wr_mod;
 	int rd_mod;
+	int interrupt_flag;
 	Serial_reg * SerialPCF;
 	spinlock_t dev_slock;
 	wait_queue_head_t dev_queue;
@@ -57,6 +58,8 @@ extern unsigned int set_baudrate(unsigned long baudrate, myModuleTag * device);
 
 
 extern unsigned int set_fifo(unsigned long depth, myModuleTag * device);
+
+extern irqreturn_t my_interrupt_dev(int irq, void *dev);
 
 
 #endif /* PCF_FUNC_H */

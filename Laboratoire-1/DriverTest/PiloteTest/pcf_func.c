@@ -135,13 +135,33 @@ extern unsigned int set_fifo(unsigned long depth, myModuleTag * device){
 }
 
 
+irqreturn_t my_interrupt_dev(int irq, void *dev){
+	uint8_t reg_status;
+	uint8_t read_data;
+	uint8_t data_to_write;
+	myModuleTag *device;
+	device=dev;
+	spin_lock(&(device->dev_slock));
+	reg_status=ioread8(&(device->SerialPCF->LSR_REG));
+	//data has been receive
+	if(reg_status & LSR_DR){
+		read_data = ioread8(&(device->SerialPCF->RBR_THR_DLL_REG));
+		writeRoundbuff((char)read_data,&device->roundRXbuf);
+	}
+	if(reg_status & LSR_THRE){
+		readRoundbuff(&data_to_write,&(device->roundTXbuf));
+		iowrite8(data_to_write,&(device->SerialPCF->RBR_THR_DLL_REG));	
+	}
+	else{
+		spin_unlock(&(device->dev_slock));
+		return IRQ_NONE;
+	}
+	
+	
 
-/*
-irqreturn_t my_interrupt_dev(int irq, void *device){
-
-
+	spin_unlock(&(device->dev_slock));
 	return IRQ_HANDLED;
-}*/
+}
 
 
 
