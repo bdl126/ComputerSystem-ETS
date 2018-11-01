@@ -5,8 +5,8 @@
 #define SerialHardware_Base_Addr0	0xc030
 #define SerialHardware_Base_Addr1	0xc020
 
-#define SerialHardware_IRQ_Addr0	0x20
-#define SerialHardware_IRQ_Addr1	0x21
+#define SerialHardware_IRQ_Addr0	20
+#define SerialHardware_IRQ_Addr1	21
 
 
 #define Number_of_Reg			0x08
@@ -34,8 +34,8 @@
 
 
 //REG LSR
-#define LSR_TEMT 	0x04
-#define LSR_THRE 	0x02
+#define LSR_TEMT 	0x40
+#define LSR_THRE 	0x20
 #define LSR_FE 		0x08
 #define LSR_PE 		0x04
 #define LSR_OE 		0x02

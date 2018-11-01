@@ -13,6 +13,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	uint8_t toto=0;
 	int i=0;	
 	char  Tab[10];
+	set_interrup_en(0,&(device[minor_number]));
 	for(i=0;i<count;i++){
 		if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))<0){
 			return -EFAULT;
@@ -22,7 +23,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
 		return -EAGAIN;
 	}
-
+	set_interrup_en(1,&(device[minor_number]));
 //	raw_copy_to_user(buf, &SerialPCF->LCR_REG, count);
 	//printk(KERN_WARNING"Pilote READ 1: (toto:%x)\n",toto);
 	//toto=inb(SerialHardware_Base_Addr+7);
@@ -41,7 +42,8 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	__put_user(&SerialPCF->SCR_REG,buf);*/
 
 	//printk(KERN_WARNING"Pilote READ 3: (toto:0x%x)\n",SerialPCF->SCR_REG);
-	printk(KERN_WARNING"Pilote READ : Hello, world : toto: 0x%x\n",toto);
+	printk(KERN_WARNING"Pilote READ Tab: %s\n",Tab);
+	printk(KERN_WARNING"Pilote READ minor_number: %d\n",minor_number);
    return 0;
 }
 
@@ -71,6 +73,7 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 	//printk(KERN_WARNING"Pilote write 3: (toto:%x)\n",&SerialPCF->SCR_REG);
 
 	//raw_copy_from_user(&SerialPCF->LCR_REG, buf, count);
+	set_interrup_en(0,&(device[minor_number]));
 	if((err=raw_copy_from_user(Tab, buf, count))){
 		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
 		return -EAGAIN;
@@ -80,12 +83,13 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 			return -EFAULT;
 		};
 	}
-   printk(KERN_WARNING"Pilote WRITE : %s",Tab);
+	set_interrup_en(1,&(device[minor_number]));
+   printk(KERN_WARNING"Pilote WRITE : %d",minor_number);
    return 0;
 }
 
 static int module_open(struct inode *inode, struct file *filp) {
-
+	int err=0;
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
 	int interrupt_state=1;
 	//verification du nombre de user
@@ -108,6 +112,9 @@ static int module_open(struct inode *inode, struct file *filp) {
 	
 
 	set_interrup_en(interrupt_state,&(device[minor_number]));
+
+
+
 
    return 0;
 }
@@ -136,10 +143,11 @@ static int module_release(struct inode *inode, struct file *filp) {
 }
 
 static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
+	uint8_t read_data=0;	
+	int debug=1;
 	int retval=0;
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
 	printk(KERN_WARNING"minor_number:%d",minor_number);
-
 	if(_IOC_TYPE(cmd) != SERIAL_MAGIC_NUM){
 		printk(KERN_WARNING"error serial magic num");
 		return -ENOTTY;
@@ -179,16 +187,47 @@ static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			set_fifo(args,&(device[minor_number]));
 			printk(KERN_WARNING"SERIAL_SET_FIFO: %ld\n", args);
 			break;
+	
+
 	default: 
 		return -ENOTTY;
 
 	}
+	if(debug){
+		read_data=ioread8(&(device[minor_number].SerialPCF->RBR_THR_DLL_REG));
+		printk(KERN_WARNING"ioctl:RBR_THR_DLL_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->IER_DLM_REG));
+		printk(KERN_WARNING"ioctl:IER_DLM_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->FCR_IIR_REG));
+		printk(KERN_WARNING"ioctl:FCR_IIR_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->LCR_REG));
+		printk(KERN_WARNING"ioctl:LCR_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->MCR_REG));
+		printk(KERN_WARNING"ioctl:MCR_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->LSR_REG));
+		printk(KERN_WARNING"ioctl:LSR_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->MSR_REG));
+		printk(KERN_WARNING"ioctl:MSR_REG: 0x%x\n\n", read_data);
+
+		read_data=ioread8(&(device[minor_number].SerialPCF->SCR_REG));
+		printk(KERN_WARNING"ioctl:SCR_REG: 0x%x\n\n", read_data);
+
+
+	}
+	
 
 	return retval;
 }
 
 
 static int __init pilote_init (void) {
+	//int err=0;
 	int result=0;
 	int i=0;
 	char buf[15];
@@ -202,9 +241,11 @@ static int __init pilote_init (void) {
    	device[0].cclass = class_create(THIS_MODULE, "moduleTest");
 
 	if(request_region(SerialHardware_Base_Addr0,Number_of_Reg,"SerialPCF16550")==NULL) {
+		printk(KERN_WARNING "ELE784_DRIVER err0:");
 		return -ENOTTY;
 	}
 	if(request_region(SerialHardware_Base_Addr1,Number_of_Reg,"SerialPCF16550")==NULL) {
+		printk(KERN_WARNING "ELE784_DRIVER err1:");
 		return -ENOTTY;
 	}
 	device[0].SerialPCF=ioport_map(SerialHardware_Base_Addr0,Number_of_Reg);
@@ -227,18 +268,19 @@ static int __init pilote_init (void) {
    	cdev_init(&(device[0].mycdev), &myModule_fops);
    	cdev_add(&(device[0].mycdev), device[0].dev, DEV_MINOR_LAST);
 
-	if(request_irq(SerialHardware_IRQ_Addr0, my_interrupt_dev, IRQF_SHARED,"MyPilote",&(device[0]))){
-		return -EFAULT;
-	}
-	
-	if(request_irq(SerialHardware_IRQ_Addr1, my_interrupt_dev, IRQF_SHARED,"MyPilote",&(device[1]))){
-		return -EFAULT;
-	}
 	pfc_init(&(device[0]));
 	pfc_init(&(device[1]));
-	set_interrup_en(0,&(device[0]));
-	set_interrup_en(0,&(device[1]));
+
+	if((request_irq(SerialHardware_IRQ_Addr0, &my_interrupt_dev, IRQF_SHARED,"MyPilote0",&(device[0])))!=0){
+		//printk(KERN_WARNING "ELE784_DRIVER err0: %d\n", err);
+		return -EFAULT;
+	}
 	
+	if((request_irq(SerialHardware_IRQ_Addr1, &my_interrupt_dev, IRQF_SHARED,"MyPilote0",&(device[1])))!=0){
+		//printk(KERN_WARNING "ELE784_DRIVER err0: %d\n", err);
+		return -EFAULT;
+	}
+
    	printk(KERN_WARNING"Pilote : Hello, world\n");
   	return 0;
 }
@@ -249,8 +291,8 @@ static void __exit pilote_exit (void) {
 	// inverse de init
 	int i =0;
 	
-	//free_irq(SerialHardware_IRQ_Addr0,&(device[0]));
-	//free_irq(SerialHardware_IRQ_Addr1,&(device[1]));
+	free_irq(SerialHardware_IRQ_Addr0,&(device[0]));
+	free_irq(SerialHardware_IRQ_Addr1,&(device[1]));
 
 	kfree(device[0].roundTXbuf.buffer_data);
 	kfree(device[1].roundTXbuf.buffer_data);

@@ -140,7 +140,7 @@ int main(void) {
 					ioctl(fd,SERIAL_SET_DATASIZE,io_args);
 					break;
 				case 'p':
-					printf ("enter desired parity enable value (odd:0, Even:1) :");
+					printf ("enter state of parity bit enable :");
 					scanf("%ld\n\n",&io_args);
 					ioctl(fd,SERIAL_SET_PARITY_EN,io_args);
 					break;
@@ -161,7 +161,7 @@ int main(void) {
 					io_args=ioctl(fd,SERIAL_GET_BUF_SIZE);
 					printf("SERIAL_GET_BUF_SIZE:%ld\n\n",io_args);
 					break;
-				case 'F':
+				case 'f':
 					printf ("enter desired fifo size:");
 					scanf("%ld\n\n",&io_args);
 					ioctl(fd,SERIAL_SET_FIFO,io_args);
