@@ -140,7 +140,6 @@ extern unsigned int set_fifo(unsigned long depth, myModuleTag * device){
 extern unsigned int set_interrup_en(unsigned long state, myModuleTag * device){
 	uint8_t data;
 	data=ioread8(&(device->SerialPCF->IER_DLM_REG));
-	printk(KERN_WARNING"set_interrup_en: IER_DLM_REG  after read: 0x%x\n",data);
 	if(state==0){
 		data = data & ~(IER_ERFBI | IER_ETFBEI);
 	}
@@ -151,7 +150,6 @@ extern unsigned int set_interrup_en(unsigned long state, myModuleTag * device){
 		return -EOVERFLOW;
 	}
 	iowrite8(data,&(device->SerialPCF->IER_DLM_REG));
-	printk(KERN_WARNING"set_interrup_en: IER_DLM_REG  after write: 0x%x\n",data);
 
 
 	return 0;
@@ -188,13 +186,13 @@ irqreturn_t my_interrupt_dev(int irq, void *dev){
 	spin_lock(&(device->dev_slock));
 	reg_status=ioread8(&(device->SerialPCF->LSR_REG));
 	//data has been receive
-//	printk(KERN_ALERT"LSR_REG:reg_status: 0x%x\n",reg_status);	
 	if((reg_status & LSR_DR) == LSR_DR){
 		read_data = ioread8(&(device->SerialPCF->RBR_THR_DLL_REG));
 		writeRoundbuff((char)read_data,&device->roundRXbuf);
 		printk(KERN_ALERT"data has been receive : reg_status: 0x%x\n",reg_status);	
-		printk(KERN_ALERT"data has been receive : RBR_THR_DLL_REG: 0x%x\n",read_data);	
+		printk(KERN_ALERT"data has been receive : RBR_THR_DLL_REG: %c\n",read_data);	
 	}
+	//transmiting buffer is empty
 	if((reg_status & LSR_THRE) == LSR_THRE){
 		if(readRoundbuff(&data_to_write,&(device->roundTXbuf)) == -1){
 
@@ -205,6 +203,7 @@ irqreturn_t my_interrupt_dev(int irq, void *dev){
 		}		
 		//printk(KERN_ALERT"transmiting buffer is empty : RBR_THR_DLL_REG: 0x%x\n",data_to_write);	
 	}
+	//DIDNT HANDLE THE INTERRUPT
 	if(((reg_status & LSR_THRE) != LSR_THRE) && ((reg_status & LSR_DR) != LSR_DR) ){
 		spin_unlock(&(device->dev_slock));
 		//printk(KERN_ALERT"my_interrupt_dev : DIDNT HANDLE THE INTERRUPT");	

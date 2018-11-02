@@ -12,18 +12,28 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	uint8_t err=0;
 	uint8_t toto=0;
 	int i=0;	
-	char  Tab[10];
-	set_interrup_en(0,&(device[minor_number]));
+	int data_red=8;
+	char  Tab[8];
+	//set_interrup_en(0,&(device[minor_number]));
+	spin_lock(&(device[minor_number].dev_slock));
 	for(i=0;i<count;i++){
-		if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))<0){
-			return -EFAULT;
+		if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
+			if(i == 0){
+				// if no data has been read 
+				spin_unlock(&(device[minor_number].dev_slock));
+				return -EFAULT;
+			}
+			else{
+			data_red=i-1;
+			}
 		};
 	}
-	if((err=raw_copy_to_user(buf, Tab, count))){
+	spin_unlock(&(device[minor_number].dev_slock));
+	if((err=raw_copy_to_user(buf, Tab, min(data_red, (int)count)))){
 		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
 		return -EAGAIN;
 	}
-	set_interrup_en(1,&(device[minor_number]));
+	//set_interrup_en(1,&(device[minor_number]));
 //	raw_copy_to_user(buf, &SerialPCF->LCR_REG, count);
 	//printk(KERN_WARNING"Pilote READ 1: (toto:%x)\n",toto);
 	//toto=inb(SerialHardware_Base_Addr+7);
@@ -42,7 +52,9 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	__put_user(&SerialPCF->SCR_REG,buf);*/
 
 	//printk(KERN_WARNING"Pilote READ 3: (toto:0x%x)\n",SerialPCF->SCR_REG);
-	printk(KERN_WARNING"Pilote READ Tab: %s\n",Tab);
+	printk(KERN_WARNING"Pilote READ min(data_red, (int)count): %d\n",min(data_red, (int)count));
+	printk(KERN_WARNING"Pilote READ data_red: %d\n",min(data_red, (int)count));
+	printk(KERN_WARNING"Pilote READ (int)count: %d\n",(int)count);
 	printk(KERN_WARNING"Pilote READ minor_number: %d\n",minor_number);
    return 0;
 }
@@ -50,7 +62,8 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 static ssize_t module_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
 	int i=0;
-	char  Tab[10];
+	int data_red=8;
+	char  Tab[8];
 	uint8_t err=0;
 	uint8_t toto=0;
 	/*if((err=raw_copy_from_user(&toto, buf, count))){
@@ -73,17 +86,19 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 	//printk(KERN_WARNING"Pilote write 3: (toto:%x)\n",&SerialPCF->SCR_REG);
 
 	//raw_copy_from_user(&SerialPCF->LCR_REG, buf, count);
-	set_interrup_en(0,&(device[minor_number]));
-	if((err=raw_copy_from_user(Tab, buf, count))){
+	//set_interrup_en(0,&(device[minor_number]));
+	if((err=raw_copy_from_user(Tab, buf, min(data_red, (int)count)))){
 		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
 		return -EAGAIN;
 	}
+	spin_unlock(&(device[minor_number].dev_slock));
 	for(i=0;i<count;i++){
 		if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
 			return -EFAULT;
 		};
 	}
-	set_interrup_en(1,&(device[minor_number]));
+	spin_unlock(&(device[minor_number].dev_slock));
+	//set_interrup_en(1,&(device[minor_number]));
    printk(KERN_WARNING"Pilote WRITE : %d",minor_number);
    return 0;
 }
@@ -144,7 +159,7 @@ static int module_release(struct inode *inode, struct file *filp) {
 
 static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 	uint8_t read_data=0;	
-	int debug=1;
+	int debug=0;
 	int retval=0;
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
 	printk(KERN_WARNING"minor_number:%d",minor_number);

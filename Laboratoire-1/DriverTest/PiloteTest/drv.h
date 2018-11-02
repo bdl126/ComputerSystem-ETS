@@ -26,6 +26,8 @@
 #define DEV_MINOR 0x00
 #define DEV_MINOR_LAST 0x02
 
+
+
 const char DEV_BASE_NAME[]="etsele_cdev";
 
 

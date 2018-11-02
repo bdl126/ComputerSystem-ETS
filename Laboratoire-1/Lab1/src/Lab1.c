@@ -32,8 +32,9 @@ int main(void) {
 	int fd;
 	unsigned long io_args=0;
 	char choix='c';
-	char Buffout[5]="bruno";
+	char Buffout[8]="bru";
 	char *Buffin;
+	unsigned int size_to_rw=3;
 /*	printf("\nh:help\n");
 	printf("s:set new device name\n");
 	printf("o:openfile\n");
@@ -43,29 +44,35 @@ int main(void) {
 		printf("%d",fd);
 		return -1;
 	}*/
-	Buffout[0]=(char)3;
+	/*Buffout[0]=(char)3;
+	Buffout[0]=(char)4;
+	Buffout[0]=(char)5;*/
 	while (choix!='q'){
 		if(currentstate==menu_msg){
 			switch(choix)
 			{
 				case 'w':
-					printf ("Buffout:%x\n",Buffout[0]);
-					if(write(fd,&Buffout,1)<0){
+					printf ("Buffout:%s\n",Buffout);
+					if(write(fd,&Buffout,size_to_rw)<0){
 						printf("ERROR WRITTING\n");
 					}
 					break;
 				case 'r':
 					Buffin=NULL;
-					if(read(fd,&Buffin,1)<0){
+					if(read(fd,&Buffin,size_to_rw)<0){
 						printf("ERROR READING\n");
 					}
 					else
 					{
-						printf ("Buffin:%x\n",&Buffin[0]);
+						printf ("Buffin:%s\n",&Buffin);
 					}
 					break;
+				case 'z':
+					printf ("enter size to read:");
+					scanf("%d\n",&size_to_rw);
+					break;
 				case 's':
-					printf ("enter message:");
+					printf ("enter message");
 					scanf("%s\n",&Buffout);
 					break;
 				case 'i':
@@ -74,6 +81,7 @@ int main(void) {
 				case 'h':
 					printf("\nh:help\n");
 					printf("w:write\n");
+					printf("z:change size of read and write");
 					printf("r:read\n");
 					printf("i:change device config\n");
 					printf("s:set message\n");
@@ -86,6 +94,7 @@ int main(void) {
 				default:
 					printf("\nh:help\n");
 					printf("w:write\n");
+					printf("z:change size of read and write");
 					printf("r:read\n");
 					printf("i:change device config\n");
 					printf("s:set message\n");
@@ -102,7 +111,7 @@ int main(void) {
 					printf ("open file :%s ",Dev_name);
 					fd=open(Dev_name,O_RDWR);
 					if(fd<0){
-						printf("\nfaile to open : %s , Error Value: %d",Dev_name,fd);
+						printf("\nfailed to open : %s , Error Value: %d",Dev_name,fd);
 					}
 					else{
 						currentstate=menu_msg;
