@@ -8,22 +8,23 @@
  ============================================================================
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 
 #include "iocmd.h"
-
+#include "Display.h"
+#include "Lab1.h"
 #include <linux/ioctl.h>
 
 char *Device;
 char Dev_name[40]="/dev/etsele_cdev0";
-typedef enum {menu_open,menu_msg,menu_conf} state;
 state currentstate=menu_open;
 
 int main(void) {
@@ -35,32 +36,26 @@ int main(void) {
 	char Buffout[8]="bru";
 	char *Buffin;
 	unsigned int size_to_rw=3;
-/*	printf("\nh:help\n");
-	printf("s:set new device name\n");
-	printf("o:openfile\n");
-	printf("q: quitte a tous moment\n");*/
+	int open_flag = O_RDWR | O_NONBLOCK;
+	int tmp=0;
 
-/*	if(fd<0){
-		printf("%d",fd);
-		return -1;
-	}*/
-	/*Buffout[0]=(char)3;
-	Buffout[0]=(char)4;
-	Buffout[0]=(char)5;*/
 	while (choix!='q'){
 		if(currentstate==menu_msg){
 			switch(choix)
 			{
 				case 'w':
-					printf ("Buffout:%s\n",Buffout);
+					printf ("writting:%s\n",Buffout);
 					if(write(fd,&Buffout,size_to_rw)<0){
 						printf("ERROR WRITTING\n");
+						printf("buffer might be full\n");
+						printf("ERROR: %s\n", strerror(errno));
 					}
 					break;
 				case 'r':
 					Buffin=NULL;
 					if(read(fd,&Buffin,size_to_rw)<0){
 						printf("ERROR READING\n");
+						printf("ERROR: %s\n", strerror(errno));
 					}
 					else
 					{
@@ -69,36 +64,25 @@ int main(void) {
 					break;
 				case 'z':
 					printf ("enter size to read:");
-					scanf("%d\n",&size_to_rw);
+					scanf("%d",&size_to_rw);
+					printf ("done\n");
 					break;
 				case 's':
-					printf ("enter message");
-					scanf("%s\n",&Buffout);
+					printf ("enter message: ");
+					scanf("%s",&Buffout);
 					break;
 				case 'i':
 					currentstate=menu_conf;
 					break;
 				case 'h':
-					printf("\nh:help\n");
-					printf("w:write\n");
-					printf("z:change size of read and write");
-					printf("r:read\n");
-					printf("i:change device config\n");
-					printf("s:set message\n");
-					printf("c:close connection\n\n");
+					displayhelp(currentstate);
 					break;
 				case 'c':
 					currentstate=menu_open;
 					close(fd);
 					break;
 				default:
-					printf("\nh:help\n");
-					printf("w:write\n");
-					printf("z:change size of read and write");
-					printf("r:read\n");
-					printf("i:change device config\n");
-					printf("s:set message\n");
-					printf("c:close connection\n\n");
+					displayhelp(currentstate);
 					break;
 			}
 
@@ -108,10 +92,13 @@ int main(void) {
 			switch (choix)
 			{
 				case 'o' :
-					printf ("open file :%s ",Dev_name);
-					fd=open(Dev_name,O_RDWR);
+					printf ("open file :%s\n ",Dev_name);
+					fd=open(Dev_name,open_flag);
+					printf("open_flag:0x%x\n",open_flag);
 					if(fd<0){
-						printf("\nfailed to open : %s , Error Value: %d",Dev_name,fd);
+						printf("\nfailed to open : %s , Error Value: %d\n\n",Dev_name,fd);
+						printf("ERROR: %s\n", strerror(errno));
+
 					}
 					else{
 						currentstate=menu_msg;
@@ -119,17 +106,42 @@ int main(void) {
 					break;
 				case 's':
 					printf ("enter new device name:");
-					scanf("%s\n",&Dev_name);
+					scanf("%s",&Dev_name);
 					break;
+				case 'f':
+					printf ("Choose flag to open this file \n");
+					printf ("0 : O_RDONLY\n");
+					printf ("1 : O_WRONLY \n");
+					printf ("2 : O_RDWR\n");
+					scanf("%d",&tmp );
+					if((tmp == 1) || (tmp == 2) || (tmp == 0))
+					{
+						open_flag=(int)tmp;
+					}
+					else
+					{
+						printf ("WRONG VALUE ENTER, TRY AGAIN\n");
+					}
+					break;
+				case 'b':
+					printf ("block or noblock \n");
+					printf ("0 : O_NONBLOCK \n");
+					printf ("1 :O_BLOCK\n");
+					scanf("%d",&tmp );
+					if(tmp){
+						open_flag= open_flag & ~O_NONBLOCK;
+					}
+					else
+					{
+						open_flag= open_flag | O_NONBLOCK;
+					}
+					break;
+
 				case 'h':
-					printf("\nh:help\n");
-					printf("s:set new device name\n");
-					printf("o:openfile\n");
+					displayhelp(currentstate);
 					break;
 				default:
-					printf("\nh:help\n");
-					printf("s:set new device name\n");
-					printf("o:openfile\n\n");
+					displayhelp(currentstate);
 					break;
 
 			}
@@ -140,67 +152,71 @@ int main(void) {
 			{
 				case 'b':
 					printf ("enter desired baudrate :");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_BAUD,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_BAUD,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 				case 'd':
 					printf ("enter desired datasize :");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_DATASIZE,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_DATASIZE,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 				case 'p':
 					printf ("enter state of parity bit enable :");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_PARITY_EN,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_PARITY_EN,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 				case 's':
 					printf ("enter desired parity selection value (odd:0, Even:1):");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_PARITY_SEL,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_PARITY_SEL,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 				case 'e':
 					currentstate=menu_msg;
 					break;
 				case 'z':
 					printf ("enter desired buf size:");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_BUF_SIZE,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_BUF_SIZE,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 				case 'g':
-					io_args=ioctl(fd,SERIAL_GET_BUF_SIZE);
+					if((io_args=ioctl(fd,SERIAL_GET_BUF_SIZE,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
+					else
+					{
 					printf("SERIAL_GET_BUF_SIZE:%ld\n\n",io_args);
+					}
 					break;
 				case 'f':
 					printf ("enter desired fifo size:");
-					scanf("%ld\n\n",&io_args);
-					ioctl(fd,SERIAL_SET_FIFO,io_args);
+					scanf("%ld",&io_args);
+					if((ioctl(fd,SERIAL_SET_FIFO,io_args))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
 					break;
 
 				case 'h':
-					printf("\nb:change baudrate of Device\n");
-					printf("d:change datasize\n");
-					printf("p:change Parity Enable\n");
-					printf("s:change Parity selection (odd/even)\n");
-					printf("z:change buffer size\n");
-					printf("g:get buffer size\n");
-					printf("f:change fifo depth\n");
-					printf("e:end configuration and return to message menu\n");
+					displayhelp(currentstate);
 					break;
 				default:
-					printf("\nb:change baudrate of Device\n");
-					printf("d:change datasize\n");
-					printf("p:change Parity Enable\n");
-					printf("s:change Parity selection (odd/even)\n");
-					printf("z:change buffer size\n");
-					printf("g:get buffer size\n");
-					printf("f:change fifo depth\n");
-					printf("e:end configuration and return to message menu\n\n");
+					displayhelp(currentstate);
 					break;
 			}
 
 		}
 
-		choix=getchar();
+		choix = getchar();
+		choix = tolower(choix);
 	}
 	close(fd);
 	return EXIT_SUCCESS;

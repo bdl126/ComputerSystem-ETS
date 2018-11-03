@@ -9,6 +9,7 @@ typedef struct {
   	unsigned int idOut;
   	unsigned int idIn;
   	unsigned int bufferSize;
+	unsigned int nb_data;
   	unsigned char *buffer_data; 
 }rbuf;
 

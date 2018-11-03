@@ -6,55 +6,49 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 myModuleTag device[2];
 
-
+int flag=0;
 static ssize_t module_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
-	uint8_t err=0;
-	uint8_t toto=0;
 	int i=0;	
 	int data_red=8;
 	char  Tab[8];
-	//set_interrup_en(0,&(device[minor_number]));
-	spin_lock(&(device[minor_number].dev_slock));
 	for(i=0;i<count;i++){
-		if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
-			if(i == 0){
-				// if no data has been read 
-				spin_unlock(&(device[minor_number].dev_slock));
-				return -EFAULT;
-			}
-			else{
-			data_red=i-1;
-			}
-		};
-	}
-	spin_unlock(&(device[minor_number].dev_slock));
-	if((err=raw_copy_to_user(buf, Tab, min(data_red, (int)count)))){
-		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
-		return -EAGAIN;
-	}
-	//set_interrup_en(1,&(device[minor_number]));
-//	raw_copy_to_user(buf, &SerialPCF->LCR_REG, count);
-	//printk(KERN_WARNING"Pilote READ 1: (toto:%x)\n",toto);
-	//toto=inb(SerialHardware_Base_Addr+7);
-	//printk(KERN_WARNING"Pilote READ 2: (toto:%x)\n",toto);
-	//toto=ioread8(&(device[minor_number].SerialPCF->LCR_REG));
-	//toto=SerialPCF->SCR_REG;
-	//raw_copy_to_user(buf, Tab, count);
-	/*if((err=raw_copy_to_user(buf, &toto, count))){
-		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
-		return -EAGAIN;
-	}*/
-	/*if((err=access_ok(VERIFY_WRITE,buf,count))){
-		printk(KERN_WARNING"Pilote:acces not ok");
-		return -ENOTTY;
-	}
-	__put_user(&SerialPCF->SCR_REG,buf);*/
 
-	//printk(KERN_WARNING"Pilote READ 3: (toto:0x%x)\n",SerialPCF->SCR_REG);
-	printk(KERN_WARNING"Pilote READ min(data_red, (int)count): %d\n",min(data_red, (int)count));
-	printk(KERN_WARNING"Pilote READ data_red: %d\n",min(data_red, (int)count));
-	printk(KERN_WARNING"Pilote READ (int)count: %d\n",(int)count);
+		if((filp->f_flags & O_NONBLOCK) == O_NONBLOCK){ // non bloquant
+			spin_lock(&(device[minor_number].dev_slock));
+			if(device[minor_number].roundRXbuf.bufferEmpty ==0){
+				if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
+				};
+			} 
+			else{
+				data_red=i;
+				spin_unlock(&(device[minor_number].dev_slock));
+				break;
+			}
+		}
+		else // bloquant
+		{
+			while(device[minor_number].roundRXbuf.bufferEmpty == 1 ){
+				wait_event_interruptible((device[minor_number].dev_queue), device[minor_number].roundRXbuf.bufferEmpty != 1);
+				
+			}
+			spin_lock(&(device[minor_number].dev_slock));
+			if(device[minor_number].roundRXbuf.bufferEmpty == 0){
+				if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
+				};
+			}
+
+		}
+		spin_unlock(&(device[minor_number].dev_slock));
+	}
+	if(data_red == 0){
+		return -EFAULT;
+	}
+	if(raw_copy_to_user(buf, Tab, min(data_red, (int)count))){
+		printk(KERN_ALERT"Pilote READ:ERROR:raw_copy_to_user");
+		return -EAGAIN;
+	}
+
 	printk(KERN_WARNING"Pilote READ minor_number: %d\n",minor_number);
    return 0;
 }
@@ -64,55 +58,56 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 	int i=0;
 	int data_red=8;
 	char  Tab[8];
-	uint8_t err=0;
-	uint8_t toto=0;
-	/*if((err=raw_copy_from_user(&toto, buf, count))){
-		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
-		return -EAGAIN;	
-	}*/
-	//printk(KERN_WARNING"Pilote write 1: (toto:0x%x)\n",SerialPCF->SCR_REG);
-	//raw_copy_from_user(Tab, buf, count);
-	//SerialPCF->SCR_REG=toto;
-	//iowrite8(toto,&(device[minor_number].SerialPCF->LCR_REG));
-	//printk(KERN_WARNING"Pilote write 2: (toto:0x%x)\n",SerialPCF->SCR_REG);
 
-	/*if((err=access_ok(VERIFY_READ,buf,count))){
-		printk(KERN_WARNING"Pilote:acces not ok");
-		return -ENOTTY;
-	}
-	__get_user(buf,&SerialPCF->SCR_REG);*/
 
-	//outb(toto,SerialHardware_Base_Addr+7);
-	//printk(KERN_WARNING"Pilote write 3: (toto:%x)\n",&SerialPCF->SCR_REG);
-
-	//raw_copy_from_user(&SerialPCF->LCR_REG, buf, count);
-	//set_interrup_en(0,&(device[minor_number]));
-	if((err=raw_copy_from_user(Tab, buf, min(data_red, (int)count)))){
-		printk(KERN_ALERT"BYTE TO BE COPIED: (err:%x)\n",err);
+	if(raw_copy_from_user(Tab, buf, min(data_red, (int)count))){
+		printk(KERN_ALERT"Pilote WRITE:ERROR:raw_copy_to_user");
 		return -EAGAIN;
 	}
-	spin_unlock(&(device[minor_number].dev_slock));
 	for(i=0;i<count;i++){
-		if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
-			return -EFAULT;
-		};
+		if((filp->f_flags & O_NONBLOCK) == O_NONBLOCK){
+			if(device[minor_number].roundTXbuf.bufferFull == 0 ){ // non bloquant
+				spin_lock(&(device[minor_number].dev_slock));
+				if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
+					return -EFAULT;
+				};
+			}
+			else 
+			{
+				data_red=i;
+				break;
+			}
+		}
+		else // bloquant
+		{
+			while(device[minor_number].roundTXbuf.bufferFull == 1 ){
+				wait_event_interruptible((device[minor_number].dev_queue), device[minor_number].roundTXbuf.bufferFull != 1);	
+			}
+			spin_lock(&(device[minor_number].dev_slock));
+			if(device[minor_number].roundRXbuf.bufferFull == 0){
+				if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
+				};
+			}
+		}
+		spin_unlock(&(device[minor_number].dev_slock));
 	}
-	spin_unlock(&(device[minor_number].dev_slock));
-	//set_interrup_en(1,&(device[minor_number]));
-   printk(KERN_WARNING"Pilote WRITE : %d",minor_number);
+	if(data_red < count){
+		spin_unlock(&(device[minor_number].dev_slock));
+		return -EOVERFLOW;
+	}
+	printk(KERN_WARNING"Pilote WRITE : %d",minor_number);
    return 0;
 }
 
 static int module_open(struct inode *inode, struct file *filp) {
-	int err=0;
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
 	int interrupt_state=1;
 	//verification du nombre de user
 	if(device[minor_number].wr_mod==1){
-		return -(ENOTTY);
+		return -(EAGAIN);
 	}
 	if(device[minor_number].rd_mod==1){
-		return -(ENOTTY);
+		return -(EAGAIN);
 	}
 	if((filp->f_flags & O_ACCMODE)==O_WRONLY){
 		device[minor_number].wr_mod=1;
@@ -242,7 +237,6 @@ static ssize_t module_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
 
 static int __init pilote_init (void) {
-	//int err=0;
 	int result=0;
 	int i=0;
 	char buf[15];
@@ -287,16 +281,14 @@ static int __init pilote_init (void) {
 	pfc_init(&(device[1]));
 
 	if((request_irq(SerialHardware_IRQ_Addr0, &my_interrupt_dev, IRQF_SHARED,"MyPilote0",&(device[0])))!=0){
-		//printk(KERN_WARNING "ELE784_DRIVER err0: %d\n", err);
 		return -EFAULT;
 	}
 	
 	if((request_irq(SerialHardware_IRQ_Addr1, &my_interrupt_dev, IRQF_SHARED,"MyPilote0",&(device[1])))!=0){
-		//printk(KERN_WARNING "ELE784_DRIVER err0: %d\n", err);
 		return -EFAULT;
 	}
 
-   	printk(KERN_WARNING"Pilote : Hello, world\n");
+   	printk(KERN_WARNING"Pilote init: Hello, world\n");
   	return 0;
 }
 
@@ -330,7 +322,7 @@ static void __exit pilote_exit (void) {
 	 
 	unregister_chrdev_region(device[0].dev, DEV_MINOR_LAST);
 
-	printk(KERN_ALERT"Pilote : Goodbye, cruel world\n");
+	printk(KERN_ALERT"Pilote exit: Goodbye, cruel world\n");
 }
 
 

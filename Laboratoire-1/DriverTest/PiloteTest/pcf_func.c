@@ -182,38 +182,36 @@ irqreturn_t my_interrupt_dev(int irq, void *dev){
 	uint8_t data_to_write;
 	myModuleTag *device;
 	device=dev;
-	//printk(KERN_ALERT"my_interrupt_dev : start of routine");
 	spin_lock(&(device->dev_slock));
 	reg_status=ioread8(&(device->SerialPCF->LSR_REG));
 	//data has been receive
 	if((reg_status & LSR_DR) == LSR_DR){
 		read_data = ioread8(&(device->SerialPCF->RBR_THR_DLL_REG));
 		writeRoundbuff((char)read_data,&device->roundRXbuf);
-		printk(KERN_ALERT"data has been receive : reg_status: 0x%x\n",reg_status);	
-		printk(KERN_ALERT"data has been receive : RBR_THR_DLL_REG: %c\n",read_data);	
+		wake_up_interruptible(&(device->dev_queue));
+		//printk(KERN_ALERT"data has been receive : reg_status: 0x%x\n",reg_status);	
+		//printk(KERN_ALERT"data has been receive : RBR_THR_DLL_REG: %c\n",read_data);	
 	}
 	//transmiting buffer is empty
 	if((reg_status & LSR_THRE) == LSR_THRE){
 		if(readRoundbuff(&data_to_write,&(device->roundTXbuf)) == -1){
 
 		}
-		else
-		{
-			iowrite8(data_to_write,&(device->SerialPCF->RBR_THR_DLL_REG));
-		}		
-		//printk(KERN_ALERT"transmiting buffer is empty : RBR_THR_DLL_REG: 0x%x\n",data_to_write);	
+		else{
+			iowrite8(data_to_write,&(device->SerialPCF->RBR_THR_DLL_REG));	
+			wake_up_interruptible(&(device->dev_queue));
+		}
+		
 	}
 	//DIDNT HANDLE THE INTERRUPT
 	if(((reg_status & LSR_THRE) != LSR_THRE) && ((reg_status & LSR_DR) != LSR_DR) ){
 		spin_unlock(&(device->dev_slock));
-		//printk(KERN_ALERT"my_interrupt_dev : DIDNT HANDLE THE INTERRUPT");	
 		return IRQ_NONE;
 	}
 	
 	
 	
 	spin_unlock(&(device->dev_slock));
-//	printk(KERN_ALERT"my_interrupt_dev : HANDLED THE INTERRUPT");	
 	return IRQ_HANDLED;
 }
 

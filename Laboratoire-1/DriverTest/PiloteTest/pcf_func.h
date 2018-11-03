@@ -23,7 +23,6 @@
 #include <linux/cdev.h>
 #include "hw.h"
 #include "circbuf.h"
-//#include <linux/errno.h> 
 #include <asm/io.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
