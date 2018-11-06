@@ -12,37 +12,31 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	int i=0;	
 	int data_red=8;
 	char  Tab[8];
-	for(i=0;i<count;i++){
+	for(i=0;i<min(data_red, (int)count);i++){
 
 		if((filp->f_flags & O_NONBLOCK) == O_NONBLOCK){ // non bloquant
-			spin_lock(&(device[minor_number].dev_slock));
 			if(device[minor_number].roundRXbuf.bufferEmpty ==0){
 				if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
 				};
 			} 
 			else{
 				data_red=i;
-				spin_unlock(&(device[minor_number].dev_slock));
 				break;
-			}
+			} 
 		}
 		else // bloquant
-		{
+		{	
 			while(device[minor_number].roundRXbuf.bufferEmpty == 1 ){
-				wait_event_interruptible((device[minor_number].dev_queue), device[minor_number].roundRXbuf.bufferEmpty != 1);
-				
+				wait_event_interruptible((device[minor_number].read_dev_queue), device[minor_number].roundRXbuf.bufferEmpty != 1);
 			}
-			spin_lock(&(device[minor_number].dev_slock));
-			if(device[minor_number].roundRXbuf.bufferEmpty == 0){
-				if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
-				};
-			}
+			if(readRoundbuff(&Tab[i],&(device[minor_number].roundRXbuf))==-1){
+			};
+		
 
 		}
-		spin_unlock(&(device[minor_number].dev_slock));
 	}
 	if(data_red == 0){
-		return -EFAULT;
+		return -ENODATA;
 	}
 	if(raw_copy_to_user(buf, Tab, min(data_red, (int)count))){
 		printk(KERN_ALERT"Pilote READ:ERROR:raw_copy_to_user");
@@ -50,7 +44,7 @@ static ssize_t module_read(struct file *filp, char __user *buf, size_t count, lo
 	}
 
 	printk(KERN_WARNING"Pilote READ minor_number: %d\n",minor_number);
-   return 0;
+   return data_red;
 }
 
 static ssize_t module_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
@@ -64,12 +58,11 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 		printk(KERN_ALERT"Pilote WRITE:ERROR:raw_copy_to_user");
 		return -EAGAIN;
 	}
-	for(i=0;i<count;i++){
+	for(i=0;i<min(data_red, (int)count);i++){
 		if((filp->f_flags & O_NONBLOCK) == O_NONBLOCK){
 			if(device[minor_number].roundTXbuf.bufferFull == 0 ){ // non bloquant
-				spin_lock(&(device[minor_number].dev_slock));
 				if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
-					return -EFAULT;
+					return -EOVERFLOW;
 				};
 			}
 			else 
@@ -80,34 +73,29 @@ static ssize_t module_write(struct file *filp, const char __user *buf, size_t co
 		}
 		else // bloquant
 		{
-			while(device[minor_number].roundTXbuf.bufferFull == 1 ){
-				wait_event_interruptible((device[minor_number].dev_queue), device[minor_number].roundTXbuf.bufferFull != 1);	
+			while(device[minor_number].roundTXbuf.bufferFull == 1){
+				wait_event_interruptible((device[minor_number].write_dev_queue), device[minor_number].roundTXbuf.bufferFull != 1);	
 			}
-			spin_lock(&(device[minor_number].dev_slock));
-			if(device[minor_number].roundRXbuf.bufferFull == 0){
-				if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
-				};
-			}
+			if(writeRoundbuff(Tab[i],&(device[minor_number].roundTXbuf))==-1){
+			};
 		}
-		spin_unlock(&(device[minor_number].dev_slock));
 	}
 	if(data_red < count){
-		spin_unlock(&(device[minor_number].dev_slock));
 		return -EOVERFLOW;
 	}
 	printk(KERN_WARNING"Pilote WRITE : %d",minor_number);
-   return 0;
+   return data_red;
 }
 
 static int module_open(struct inode *inode, struct file *filp) {
 	int minor_number=iminor(filp->f_path.dentry->d_inode);
-	int interrupt_state=1;
+	int interrupt_state=3;
 	//verification du nombre de user
 	if(device[minor_number].wr_mod==1){
-		return -(EAGAIN);
+		return -(EUSERS);
 	}
 	if(device[minor_number].rd_mod==1){
-		return -(EAGAIN);
+		return -(EUSERS);
 	}
 	if((filp->f_flags & O_ACCMODE)==O_WRONLY){
 		device[minor_number].wr_mod=1;
@@ -265,10 +253,10 @@ static int __init pilote_init (void) {
 		printk(KERN_WARNING"buf : %s\n", buf);
 		device_create(device[0].cclass, NULL, device[0].dev+i, NULL, buf);
 
-		initRoundbuff(8,&(device[i].roundTXbuf));
-	   	initRoundbuff(8,&(device[i].roundRXbuf));
-		init_waitqueue_head(&(device[i].dev_queue));
-		spin_lock_init(&(device[i].dev_slock));
+		initRoundbuff(256,&(device[i].roundTXbuf));
+	   	initRoundbuff(256,&(device[i].roundRXbuf));
+		init_waitqueue_head(&(device[i].read_dev_queue));
+		init_waitqueue_head(&(device[i].write_dev_queue));
 		device[i].wr_mod=0;
 		device[i].rd_mod=0;
 

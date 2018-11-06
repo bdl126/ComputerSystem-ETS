@@ -47,7 +47,6 @@ int main(void) {
 					printf ("writting:%s\n",Buffout);
 					if(write(fd,&Buffout,size_to_rw)<0){
 						printf("ERROR WRITTING\n");
-						printf("buffer might be full\n");
 						printf("ERROR: %s\n", strerror(errno));
 					}
 					break;
@@ -70,6 +69,7 @@ int main(void) {
 				case 's':
 					printf ("enter message: ");
 					scanf("%s",&Buffout);
+					printf ("done\n");
 					break;
 				case 'i':
 					currentstate=menu_conf;
@@ -136,6 +136,7 @@ int main(void) {
 						open_flag= open_flag | O_NONBLOCK;
 					}
 					break;
+					printf ("done\n");
 
 				case 'h':
 					displayhelp(currentstate);
@@ -156,12 +157,18 @@ int main(void) {
 					if((ioctl(fd,SERIAL_SET_BAUD,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
 					}
+					else{
+						printf ("done\n");
+					}
 					break;
 				case 'd':
 					printf ("enter desired datasize :");
 					scanf("%ld",&io_args);
 					if((ioctl(fd,SERIAL_SET_DATASIZE,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
+					}
+					else {
+						printf ("done\n");
 					}
 					break;
 				case 'p':
@@ -170,12 +177,18 @@ int main(void) {
 					if((ioctl(fd,SERIAL_SET_PARITY_EN,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
 					}
+					else {
+						printf ("done\n");
+					}
 					break;
 				case 's':
 					printf ("enter desired parity selection value (odd:0, Even:1):");
 					scanf("%ld",&io_args);
 					if((ioctl(fd,SERIAL_SET_PARITY_SEL,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
+					}
+					else {
+						printf ("done\n");
 					}
 					break;
 				case 'e':
@@ -186,6 +199,9 @@ int main(void) {
 					scanf("%ld",&io_args);
 					if((ioctl(fd,SERIAL_SET_BUF_SIZE,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
+					}
+					else {
+						printf ("done\n");
 					}
 					break;
 				case 'g':
@@ -202,6 +218,9 @@ int main(void) {
 					scanf("%ld",&io_args);
 					if((ioctl(fd,SERIAL_SET_FIFO,io_args))<0){
 						printf("ERROR: %s\n", strerror(errno));
+					}
+					else {
+						printf ("done\n");
 					}
 					break;
 

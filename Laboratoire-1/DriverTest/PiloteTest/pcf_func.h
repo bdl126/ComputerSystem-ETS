@@ -40,8 +40,8 @@ typedef struct  {
 	int rd_mod;
 	int interrupt_flag;
 	Serial_reg * SerialPCF;
-	spinlock_t dev_slock;
-	wait_queue_head_t dev_queue;
+	wait_queue_head_t write_dev_queue;
+	wait_queue_head_t read_dev_queue;
 
 }myModuleTag;
 

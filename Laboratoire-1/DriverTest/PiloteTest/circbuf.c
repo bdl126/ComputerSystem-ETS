@@ -17,15 +17,16 @@ EXPORT_SYMBOL_GPL(initRoundbuff);
 extern int  writeRoundbuff (char x,rbuf *roundbf){
 
 	if(roundbf->bufferFull){
-		printk(KERN_WARNING"WRITE:bufferFUll:%d\n",roundbf->bufferFull);
 		return -1;
 	}
-	roundbf->bufferEmpty=0;
-	roundbf->buffer_data[roundbf->idIn]=x;
 	roundbf->idIn=(roundbf->idIn+1)%roundbf->bufferSize;
+	roundbf->buffer_data[roundbf->idIn]=x;
 	roundbf->nb_data++;
 	if(roundbf->idIn==roundbf->idOut){
 		roundbf->bufferFull=1;
+	}
+	else {
+		roundbf->bufferEmpty=0;
 	}
 
 
@@ -37,15 +38,16 @@ EXPORT_SYMBOL_GPL(writeRoundbuff);
 extern int  readRoundbuff (char *x,rbuf *roundbf){
 
 	if(roundbf->bufferEmpty){
-		printk(KERN_WARNING"READ empty: %d\n",roundbf->bufferEmpty);
 		return -1;
 	}
-	roundbf->bufferFull=0;
-	*x=roundbf->buffer_data[roundbf->idOut];
 	roundbf->idOut=(roundbf->idOut+1)%roundbf->bufferSize;
+	*x=roundbf->buffer_data[roundbf->idOut];
 	roundbf->nb_data--;
 	if(roundbf->idIn==roundbf->idOut){
 		roundbf->bufferEmpty=1;
+	}
+	else {
+		roundbf->bufferFull=0;
 	}
 	return 0 ;
 }

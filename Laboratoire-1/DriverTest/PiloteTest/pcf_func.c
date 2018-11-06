@@ -144,6 +144,12 @@ extern unsigned int set_interrup_en(unsigned long state, myModuleTag * device){
 		data = data & ~(IER_ERFBI | IER_ETFBEI);
 	}
 	else if(state==1){
+		data = (data & ~IER_ETFBEI) | IER_ERFBI;
+	} 
+	else if(state==2){
+		data = (data & ~IER_ERFBI) | IER_ETFBEI;
+		} 
+	else if(state==3){
 		data = data | IER_ERFBI | IER_ETFBEI;
 	} 
 	else{
@@ -179,39 +185,36 @@ extern unsigned int pfc_init(myModuleTag * device){
 irqreturn_t my_interrupt_dev(int irq, void *dev){
 	uint8_t reg_status;
 	uint8_t read_data;
-	uint8_t data_to_write;
+	char data_to_write;
 	myModuleTag *device;
 	device=dev;
-	spin_lock(&(device->dev_slock));
 	reg_status=ioread8(&(device->SerialPCF->LSR_REG));
 	//data has been receive
 	if((reg_status & LSR_DR) == LSR_DR){
 		read_data = ioread8(&(device->SerialPCF->RBR_THR_DLL_REG));
 		writeRoundbuff((char)read_data,&device->roundRXbuf);
-		wake_up_interruptible(&(device->dev_queue));
-		//printk(KERN_ALERT"data has been receive : reg_status: 0x%x\n",reg_status);	
-		//printk(KERN_ALERT"data has been receive : RBR_THR_DLL_REG: %c\n",read_data);	
+		wake_up_interruptible(&(device->read_dev_queue));
 	}
 	//transmiting buffer is empty
 	if((reg_status & LSR_THRE) == LSR_THRE){
 		if(readRoundbuff(&data_to_write,&(device->roundTXbuf)) == -1){
-
+			
 		}
 		else{
-			iowrite8(data_to_write,&(device->SerialPCF->RBR_THR_DLL_REG));	
-			wake_up_interruptible(&(device->dev_queue));
+			//printk(KERN_WARNING"Pilote WRITE interrupt: %c",data_to_write);
+			iowrite8((uint8_t)data_to_write,&(device->SerialPCF->RBR_THR_DLL_REG));	
+			wake_up_interruptible(&(device->write_dev_queue));
 		}
 		
 	}
 	//DIDNT HANDLE THE INTERRUPT
 	if(((reg_status & LSR_THRE) != LSR_THRE) && ((reg_status & LSR_DR) != LSR_DR) ){
-		spin_unlock(&(device->dev_slock));
 		return IRQ_NONE;
 	}
 	
 	
 	
-	spin_unlock(&(device->dev_slock));
+
 	return IRQ_HANDLED;
 }
 
