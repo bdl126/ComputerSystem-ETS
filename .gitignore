@@ -1,6 +1,6 @@
-Laboratoire-1/DriverTest/PiloteTest/Module.symvers
-Laboratoire-1/DriverTest/PiloteTest/modules.order
-Laboratoire-1/DriverTest/PiloteTest/.cache.mk
+*.symvers
+*.order
+*.mk
 *.o
 *.ko
 *.cmd
