@@ -1,7 +1,7 @@
 #ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 
-cam-objs	:= drv.o 
+cam-objs	:= drv.o
 obj-m		:= cam.o
 
 
