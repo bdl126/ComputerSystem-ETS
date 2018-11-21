@@ -4,7 +4,6 @@
 
 MODULE_AUTHOR("Bruno De Lafontaine");
 MODULE_LICENSE("Dual BSD/GPL");
-static struct usb_device *device;
 unsigned int myStatus=0;
 unsigned int myLength=42666;
 unsigned int myLengthUsed=0;
@@ -29,7 +28,6 @@ static void complete_callback(struct urb *urb){
 			if (urb->iso_frame_desc[i].status < 0) {
 				continue;
 			}
-			
 			data = urb->transfer_buffer + urb->iso_frame_desc[i].offset;
 			if(data[1] & (1 << 6)){
 				continue;
@@ -75,15 +73,17 @@ int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id){
 	int result =0;
 	struct usb_host_interface 	*iface_desc;
 	struct usb_device *dev=interface_to_usbdev(intf);
+	struct	my_usb_struct toto;
+
 
 	iface_desc = intf->cur_altsetting;
 	if(iface_desc->desc.bInterfaceClass == CC_VIDEO && 
 		iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING){
-		usb_set_intfdata(intf, device);
+		usb_set_intfdata(intf, &toto);
 		usb_register_dev(intf,&class_driver);
 		usb_set_interface(dev,iface_desc->desc.bInterfaceNumber,0);
 		myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
-		printk(KERN_INFO "ELE784 -> Probe:video interface found\n");
+		printk(KERN_WARNING "ELE784 -> Probe:video interface found\n");
 
 	}
 
@@ -98,7 +98,7 @@ void ele784_disconnect(struct usb_interface *intf){
 		iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING){
 		usb_deregister_dev(intf,&class_driver);
 		kfree(myData);
-		printk(KERN_INFO "ELE784 -> Disconnect :video interface disconnect\n");
+		printk(KERN_WARNING "ELE784 -> Disconnect :video interface disconnect\n");
 	}
 
 	printk(KERN_ALERT"ELE784 -> Disconnect \n\r");
@@ -122,7 +122,7 @@ int ele784_open(struct inode *inode, struct file *file){
 	intf = usb_find_interface(&udriver, subminor);
 	if (!intf) {
 		printk(KERN_WARNING "ELE784 -> Open: Ne peux ouvrir le peripherique");
-		return -ENODEV;
+		return -1;
 	}
 	file->private_data = intf;
 	return 0;
@@ -156,15 +156,14 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 		printk(KERN_ALERT"ELE784 -> IOCTL_SET \n\r");
 		break;
 	case IOCTL_STREAMON:
-		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMON \n\r");
-		Direction[0]=NULL;
-		usb_control_msg(dev,PIPE_ENDPOINT,STREAM_REQUEST,
-				USB_DIR_OUT,0x0004,0x0001,Direction,0,0);
+		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMON - devnum : %d  \n\r",dev->devnum);
+		usb_control_msg(dev, usb_sndctrlpipe(dev,0) ,STREAM_REQUEST,
+				USB_DIR_OUT,0x0004,0x0001,&Direction,0,0);
 		break;
 	case IOCTL_STREAMOFF:
 		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMOFF \n\r");
-		usb_control_msg(dev,PIPE_ENDPOINT,STREAM_REQUEST,
-				USB_DIR_OUT,0x0000,0x0001,Direction,0,0);
+		usb_control_msg(dev,usb_sndctrlpipe(dev,0) ,STREAM_REQUEST,
+				USB_DIR_OUT,0x0000,0x0001,&Direction,0,0);
 		break;
 	case IOCTL_GRAB:
 		printk(KERN_ALERT"ELE784 -> IOCTL_GRAB \n\r");

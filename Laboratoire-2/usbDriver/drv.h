@@ -60,7 +60,8 @@ static struct usb_class_driver class_driver = {
 	.minor_base =DEV_MINOR,
 };
 
-
-
+struct my_usb_struct {
+    struct usb_interface *intf;
+};
 
 module_usb_driver(udriver)
