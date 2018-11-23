@@ -103,6 +103,7 @@ int main(void) {
 					printf ("1:streamon \n 0:streamoff\n");
 					scanf("%ld",&io_args);
 					if(io_args == 1){
+						printf ("IOCTL_STREAMON\n");
 						if((ioctl(fd,IOCTL_STREAMON))<0){
 							printf("ERROR: %s\n", strerror(errno));
 						}
@@ -111,6 +112,7 @@ int main(void) {
 						}
 					}
 					else {
+						printf ("IOCTL_STREAMOFF\n");
 						if((ioctl(fd,IOCTL_STREAMOFF))<0){
 							printf("ERROR: %s\n", strerror(errno));
 						}
@@ -119,6 +121,15 @@ int main(void) {
 						}
 
 					}
+					break;
+				case 'e':
+					currentstate=menu_msg;
+					break;
+				case 'h':
+					displayhelp(currentstate);
+					break;
+				default:
+					displayhelp(currentstate);
 					break;
 			}
 

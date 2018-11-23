@@ -28,15 +28,9 @@ void displayhelp(state currentstate){
 
 	}
 	else if (currentstate == menu_conf){
-		printf("\nb:change baudrate of Device\n");
-		printf("d:change datasize\n");
-		printf("p:change Parity Enable\n");
-		printf("s:change Parity selection (odd/even)\n");
-		printf("z:change buffer size\n");
-		printf("g:get buffer size\n");
-		printf("f:change fifo depth\n");
-		printf("e:end configuration and return to message menu\n");
-		printf("q:to quit\n\n");
+		printf("\nh:help\n");
+		printf("s:Stream on/off\n");
+
 
 
 	}

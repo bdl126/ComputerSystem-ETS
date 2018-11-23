@@ -8,7 +8,9 @@ unsigned int myStatus=0;
 unsigned int myLength=42666;
 unsigned int myLengthUsed=0;
 char * myData;
-
+struct	my_usb_struct toto;
+struct usb_interface tata;
+/*
 static void complete_callback(struct urb *urb){
 
 	int ret;
@@ -48,7 +50,6 @@ static void complete_callback(struct urb *urb){
 				myStatus = 1; // DONE
 			}
 	
-			/* Mark the buffer as done if the EOF marker is set. */
 			if ((data[1] & (1 << 1)) && (myLengthUsed != 0)) {						
 				myStatus = 1; // DONE
 			}					
@@ -68,22 +69,25 @@ static void complete_callback(struct urb *urb){
 	}
 }
 
-
+*/
 int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id){
 	int result =0;
 	struct usb_host_interface 	*iface_desc;
 	struct usb_device *dev=interface_to_usbdev(intf);
-	struct	my_usb_struct toto;
-
+	struct usb_endpoint_descriptor *endpointDesc;
+	
 
 	iface_desc = intf->cur_altsetting;
-	if(iface_desc->desc.bInterfaceClass == CC_VIDEO && 
-		iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING){
-		usb_set_intfdata(intf, &toto);
+	endpointDesc= &(iface_desc->endpoint[0].desc);
+	printk(KERN_WARNING "ELE784 -> Probe:video interface \n");	
+
+	if((iface_desc->desc.bInterfaceClass == CC_VIDEO) && 
+		(iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING)){
 		usb_register_dev(intf,&class_driver);
 		usb_set_interface(dev,iface_desc->desc.bInterfaceNumber,0);
 		myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
-		printk(KERN_WARNING "ELE784 -> Probe:video interface found\n");
+		printk(KERN_WARNING "ELE784 -> Probe:video interface found minor %d \n",intf->minor);
+		printk(KERN_WARNING "ELE784 -> Probe:iface_desc->desc.bInterfaceNumber 0x%x\n", iface_desc->desc.bInterfaceNumber);
 
 	}
 
@@ -131,20 +135,37 @@ int ele784_open(struct inode *inode, struct file *file){
 
 ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 
-	struct usb_interface *intf = filp->private_data;
-	struct usb_device *dev = usb_get_intfdata(intf);
-	struct usb_host_interface 	*cur_altsetting;
-	struct usb_endpoint_descriptor *endpointDesc;
-	struct urb *myUrb[5];
-	int j,i,ret=0;
-		uint32_t nbPackets = 40;  // The number of isochronous packets this urb should contain
-	uint32_t nbUrbs = 5;
+	struct usb_interface *intf= filp->private_data;
+	struct usb_device *dev = interface_to_usbdev(intf);
+	//struct usb_host_interface 	*cur_altsetting;
+	//struct usb_endpoint_descriptor *endpointDesc;
+	//struct urb *myUrb[5];
+	//int j,i,ret=0;
+	//uint32_t nbPackets = 40;  // The number of isochronous packets this urb should contain
+	//uint32_t nbUrbs = 5;
 	char Direction[4]={0};
 	uint32_t data;
-	cur_altsetting = intf->cur_altsetting;
-	endpointDesc = &(cur_altsetting->endpoint[0].desc);
-	uint32_t myPacketSize = le16_to_cpu(endpointDesc->wMaxPacketSize);
-	size_t size = myPacketSize * nbPackets;
+	//cur_altsetting = toto.intf;
+	// = &(cur_altsetting->endpoint[0].desc);
+	//uint32_t myPacketSize = le16_to_cpu(endpointDesc->wMaxPacketSize);
+	//size_t size = myPacketSize * nbPackets;
+/*
+	printk(KERN_WARNING "ELE784 -> ioctl:videointerface intf minor: %d \n",intf->minor);
+	printk(KERN_WARNING "ELE784 -> ioctl:dev->devnum: %d \n",dev->devnum);
+
+*/
+	/*if(cur_altsetting->desc.bInterfaceClass == CC_VIDEO && 
+		cur_altsetting->desc.bInterfaceSubClass == SC_VIDEOSTREAMING)
+	{
+		printk(KERN_ALERT"ELE784 -> cur_altsetting WORK +++ \n\r");
+	} 
+	else
+	{
+		printk(KERN_ALERT"ELE784 -> cur_altsetting ERROR --- \n\r");
+		return -ENOMEM;		
+	}*/
+
+
 
 
 	switch(cmd){
@@ -158,14 +179,14 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 	case IOCTL_STREAMON:
 		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMON - devnum : %d  \n\r",dev->devnum);
 		usb_control_msg(dev, usb_sndctrlpipe(dev,0) ,STREAM_REQUEST,
-				USB_DIR_OUT,0x0004,0x0001,&Direction,0,0);
+				USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,0x0004,0x0001,NULL,0,0);
 		break;
 	case IOCTL_STREAMOFF:
 		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMOFF \n\r");
 		usb_control_msg(dev,usb_sndctrlpipe(dev,0) ,STREAM_REQUEST,
-				USB_DIR_OUT,0x0000,0x0001,&Direction,0,0);
+				USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,0x0000,0x0001,NULL,0,0);
 		break;
-	case IOCTL_GRAB:
+	/*case IOCTL_GRAB:
 		printk(KERN_ALERT"ELE784 -> IOCTL_GRAB \n\r");
 
 		for (i = 0; i < nbUrbs; ++i) {
@@ -207,7 +228,7 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 		}
 
 
-		break;
+		break;*/
 	case IOCTL_PANTILT:
 		printk(KERN_ALERT"ELE784 -> IOCTL_PANTILT \n\r");
 		if(args == HAUT){

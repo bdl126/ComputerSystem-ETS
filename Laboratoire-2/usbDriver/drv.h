@@ -21,11 +21,13 @@
 #define DEV_MAJOR 250
 #define DEV_MINOR 0
 
-#define USB_VENDOR_ID	0x046d 
-#define USB_PRODUCT_ID 	0x0994 //08cc 0994
+#define USB_VENDOR_ID1		0x046d 
+#define USB_PRODUCT_ID0 	0x0994 //08cc 0994
+#define USB_PRODUCT_ID1		0x08cc
 
 static struct usb_device_id usb_device []= {
-	{USB_DEVICE(USB_VENDOR_ID, USB_PRODUCT_ID)},
+	{USB_DEVICE(USB_VENDOR_ID1, USB_PRODUCT_ID0)},
+	{USB_DEVICE(USB_VENDOR_ID1, USB_PRODUCT_ID1)},
 	{},
 
 };
@@ -61,7 +63,7 @@ static struct usb_class_driver class_driver = {
 };
 
 struct my_usb_struct {
-    struct usb_interface *intf;
+    struct usb_host_interface *intf;
 };
 
 module_usb_driver(udriver)
