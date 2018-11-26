@@ -122,8 +122,69 @@ int main(void) {
 
 					}
 					break;
+
+				case 'r':
+						printf ("Resetting tilt\n");
+						if((ioctl(fd,IOCTL_PANTILT_RESEST))<0){
+							printf("ERROR: %s\n", strerror(errno));
+						}
+						else{
+							printf ("done\n");
+						}
+						break;
+				case 't':
+						printf ("0:HAUT \n1:BAS\n2:GAUCHE\n3:DROITE\n");
+						scanf("%ld",&io_args);
+						if(io_args == HAUT){
+							printf ("tilt HAUT\n");
+							if((ioctl(fd,IOCTL_PANTILT,io_args))<0){
+								printf("ERROR: %s\n", strerror(errno));
+							}
+							else{
+								printf ("done tilt HAUT\n");
+							}
+						}
+						else if(io_args == BAS){
+							printf ("tilt BAS\n");
+							if((ioctl(fd,IOCTL_PANTILT,io_args))<0){
+								printf("ERROR: %s\n", strerror(errno));
+							}
+							else{
+								printf ("done tilt BAS\n");
+							}
+
+						}
+						else if(io_args == GAUCHE){
+							printf ("tilt GAUCHE\n");
+							if((ioctl(fd,IOCTL_PANTILT,io_args))<0){
+								printf("ERROR: %s\n", strerror(errno));
+							}
+							else{
+								printf ("done tilt GAUCHE\n");
+							}
+						}
+						else if(io_args == DROITE){
+							printf ("tilt DROITE\n");
+							if((ioctl(fd,IOCTL_PANTILT,io_args))<0){
+								printf("ERROR: %s\n", strerror(errno));
+							}
+							else{
+								printf ("done tilt DROITE\n");
+							}
+						}
+
+						break;
 				case 'e':
 					currentstate=menu_msg;
+					break;
+				case 'g':
+					printf("IOCTL_GRAB");
+					if((ioctl(fd,IOCTL_GRAB))<0){
+						printf("ERROR: %s\n", strerror(errno));
+					}
+					else{
+						printf ("done\n");
+					}
 					break;
 				case 'h':
 					displayhelp(currentstate);

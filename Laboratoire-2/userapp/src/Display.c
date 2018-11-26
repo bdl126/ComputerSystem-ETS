@@ -30,6 +30,10 @@ void displayhelp(state currentstate){
 	else if (currentstate == menu_conf){
 		printf("\nh:help\n");
 		printf("s:Stream on/off\n");
+		printf("t:change camera tilt\n");
+		printf("r:reset tilt to default position \n");
+		printf("g:Ioctl Grab \n");
+		printf("e:exit\n");
 
 
 

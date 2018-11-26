@@ -37,9 +37,7 @@ static int ele784_probe(struct usb_interface *intf, const struct usb_device_id *
 static void ele784_disconnect(struct usb_interface *intf);
 static int ele784_open(struct inode *inode, struct file *filp);
 static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args);
-static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);/*
-static void __exit cam_exit(void);
-static int __init cam_init(void);*/
+static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
 
 static struct usb_driver udriver ={
 	.name="Camera_driver_orbit",
@@ -63,7 +61,14 @@ static struct usb_class_driver class_driver = {
 };
 
 struct my_usb_struct {
-    struct usb_host_interface *intf;
+   struct usb_device *udev;	     /* the usb device for this device */
+   struct usb_endpoint_descriptor *endpointDesc;
+   uint32_t myPacketSize;
+   uint32_t nbPackets;
+   uint32_t nbUrbs ;
+   size_t size;
+   struct urb *myUrb[];	
+
 };
 
 module_usb_driver(udriver)
