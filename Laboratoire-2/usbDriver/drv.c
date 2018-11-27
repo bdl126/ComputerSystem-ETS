@@ -82,11 +82,11 @@ int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id){
 		(iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING)){
 		usb_register_dev(intf,&class_driver);
 		usb_set_interface(dev,iface_desc->desc.bInterfaceNumber,0);
-		myStruct.udev=dev;
-		myStruct.nbPackets=40;
-		myStruct.nbUrbs =5;
+		myStruct.udev = dev;
+		myStruct.endpointDesc = &(iface_desc->endpoint[0].desc);
+		myStruct.nbPackets = 40;
+		myStruct.nbUrbs = 5;
 		myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
-		printk(KERN_WARNING "ELE784 -> Probe:video interface found minor %d \n",intf->minor);
 		printk(KERN_WARNING "ELE784 -> Probe:iface_desc->desc.bInterfaceNumber 0x%x\n", iface_desc->desc.bInterfaceNumber);
 
 	}
@@ -133,30 +133,28 @@ int ele784_open(struct inode *inode, struct file *file){
 
 }
 ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
+	
+	/*struct usb_interface *intf = file->private_data;
+	struct usb_host_interface 	*iface_desc;
+	struct usb_device *dev = usb_get_intfdata(intf);
+	struct usb_endpoint_descriptor *endpointDesc;*/
 
-	struct usb_interface *intf= filp->private_data;
-	struct usb_device *dev=interface_to_usbdev(intf);
-	//struct usb_host_interface 	*cur_altsetting;
-	//struct usb_endpoint_descriptor *endpointDesc;
-	//myStruct.udev=dev;
 	int j,i,ret=0;
 	static char Direction[4]={0};
-	uint32_t nbPackets,myPacketSize;
-	size_t size;
+	__le16 myPacketSize;
+	unsigned int size;
 
-	//cur_altsetting = intf->cur_altsetting;
-	//endpointDesc = &(cur_altsetting->endpoint[0].desc);
-	
-	//myStruct.myPacketSize = le16_to_cpu(endpointDesc->wMaxPacketSize);	
+	//iface_desc = intf->cur_altsetting;
+	//endpointDesc = &(iface_desc->endpoint[0].desc);
 
 
-	size = (size_t)(myStruct.myPacketSize * myStruct.nbPackets);
-
+	myPacketSize = le16_to_cpu(myStruct.endpointDesc->wMaxPacketSize);
+	size = myPacketSize * myStruct.nbPackets;
 
 
 
 
-	printk(KERN_ALERT"ELE784 ->cmd:0x%x args:%ld \n\r",cmd,args);
+	//printk(KERN_ALERT"ELE784 ->myPacketSize:%d myStruct.nbPackets:%d \n\r",myPacketSize,myStruct.nbPackets);
 	switch(cmd){
 	
 	case IOCTL_GET:
@@ -185,42 +183,43 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 		  printk(KERN_ALERT"ELE784 ->  myUrb[i]transfer_dma add: %p \n\r",&(myStruct.myUrb[i]->transfer_dma));
 		//  printk(KERN_ALERT"ELE784 ->  myUrb[i]myStruct.udev add: %p \n\r",(void *)(myStruct.udev));
 		/*  printk(KERN_ALERT"ELE784 ->  myUrb[i]myPacketSize: %d \n\r",myStruct.myPacketSize);
-		  printk(KERN_ALERT"ELE784 ->  myUrb[i]nbPackets: %d \n\r",myStruct.nbPackets);*/
+		  printk(KERN_ALERT"ELE784 ->  myUrb[i]sizeof(size_t): %ld \n\r",sizeof(size_t));*/
+		  printk(KERN_ALERT"ELE784 ->  sizeof(myPacketSize): %ld \n\r",sizeof(myPacketSize));
 
 		  if (&(myStruct.myUrb[i]) == NULL) {
 		    //printk(KERN_WARNING "");		
 		    return -ENOMEM;
 		  }
 
-		  myStruct.myUrb[i]->transfer_buffer = usb_alloc_coherent(myStruct.udev,size,GFP_KERNEL,&(myStruct.myUrb[i]->transfer_dma));
-/*
-		  if (&(myUrb[i]->transfer_buffer) == NULL) {
+		  myStruct.myUrb[i]->transfer_buffer = usb_alloc_coherent(myStruct.udev,sizeof(myPacketSize),GFP_KERNEL,&(myStruct.myUrb[i]->transfer_dma));
+
+		  if (&(myStruct.myUrb[i]->transfer_buffer) == NULL) {
 		    //printk(KERN_WARNING "");		
-		    usb_free_urb(myUrb[i]);
+		    usb_free_urb(myStruct.myUrb[i]);
 		    return -ENOMEM;
 		  }
 
-		  myUrb[i]->dev = myStruct.udev;
-		  myUrb[i]->context = myStruct.udev;
-		  myUrb[i]->pipe = usb_rcvisocpipe(myStruct.udev, myStruct.endpointDesc->bEndpointAddress);
-		  myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
-		  myUrb[i]->interval = myStruct.endpointDesc->bInterval;
-		  myUrb[i]->complete = complete_callback;
-		  myUrb[i]->number_of_packets = nbPackets;
-		  myUrb[i]->transfer_buffer_length = size;
+		  myStruct.myUrb[i]->dev = myStruct.udev;
+		  myStruct.myUrb[i]->context = myStruct.udev;
+		  myStruct.myUrb[i]->pipe = usb_rcvisocpipe(myStruct.udev, 0);
+		  myStruct.myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
+		 // myStruct.myUrb[i]->interval = myStruct.endpointDesc->bInterval;
+		  myStruct.myUrb[i]->complete = complete_callback;
+		  myStruct.myUrb[i]->number_of_packets = myStruct.nbPackets;
+		  //myStruct.myUrb[i]->transfer_buffer_length = size;
 
-		  for (j = 0; j < nbPackets; ++j) {
-		    myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
-		    myUrb[i]->iso_frame_desc[j].length = myPacketSize;
-		  }								
+		/*  for (j = 0; j < myStruct.nbPackets; ++j) {
+		    myStruct.myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
+		    myStruct.myUrb[i]->iso_frame_desc[j].length = myPacketSize;
+		  }	*/							
 		}
 
-		for(i = 0; i < nbUrbs; i++){
-		  if ((ret = usb_submit_urb( myUrb[i],GFP_KERNEL)) < 0) {
+		/*for(i = 0; i < myStruct.nbUrbs; i++){
+		  if ((ret = usb_submit_urb( myStruct.myUrb[i],GFP_KERNEL)) < 0) {
 		    //printk(KERN_WARNING "");		
 		    return ret;
-		  }*/
-		}
+		  }
+		}*/
 
 		
 		break;
