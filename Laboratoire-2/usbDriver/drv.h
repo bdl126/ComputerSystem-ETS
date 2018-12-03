@@ -1,3 +1,4 @@
+#include <generated/autoconf.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -13,7 +14,7 @@
 #include <linux/usb/video.h>
 #include <linux/completion.h>
 #include "usbvideo.h"
-
+#include <linux/uaccess.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
@@ -33,11 +34,15 @@ static struct usb_device_id usb_device []= {
 };
 MODULE_DEVICE_TABLE (usb,usb_device);
 
+static int __init pilote_init (void);
+static void __exit pilote_exit (void);
+
 static int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id);
 static void ele784_disconnect(struct usb_interface *intf);
 static int ele784_open(struct inode *inode, struct file *filp);
 static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args);
 static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
+
 
 static struct usb_driver udriver ={
 	.name="Camera_driver_orbit",
@@ -62,13 +67,12 @@ static struct usb_class_driver class_driver = {
 
 struct my_usb_struct {
    struct usb_device *udev;	     /* the usb device for this device */
-   struct usb_endpoint_descriptor *endpointDesc;
+   struct usb_endpoint_descriptor endpointDesc;
    unsigned short myPacketSize;
-   	unsigned short nbPackets;
-   int nbUrbs ;
-   size_t size;
-   struct urb *myUrb[5];	
+   size_t size;	
+	struct usb_interface intf;
 
 };
 
-module_usb_driver(udriver)
+//module_usb_driver(udriver)
+#include <asm/uaccess.h>

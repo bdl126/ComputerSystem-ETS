@@ -8,8 +8,36 @@ unsigned int myStatus=0;
 unsigned int myLength=42666;
 unsigned int myLengthUsed=0;
 char * myData;
+struct completion UrbComplete[5];
 struct	my_usb_struct myStruct;
 struct usb_interface tata;
+struct urb *myUrb[5];
+int nbUrbs =5;
+//wait_queue_head_t UrbComplete;
+
+
+module_init(pilote_init);
+module_exit(pilote_exit);
+
+static int __init pilote_init (void) {
+
+	int result ;
+	int i =0;
+	for(i=0;i<5;i++){
+		init_completion(&(UrbComplete[i]));
+	}
+	//init_waitqueue_head(&UrbComplete);
+	myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
+	result= usb_register(&udriver);
+	printk(KERN_WARNING "ELE784 -> pilote_init \n");
+
+	return result;
+}
+
+static void __exit pilote_exit (void) {
+	 usb_deregister(&udriver);
+}
+
 
 static void complete_callback(struct urb *urb){
 
@@ -60,12 +88,11 @@ static void complete_callback(struct urb *urb){
 				//printk(KERN_WARNING "");
 			}
 		}else{
-			///////////////////////////////////////////////////////////////////////
-			//  Synchronisation
-			///////////////////////////////////////////////////////////////////////
+			complete(urb->context);
+			printk(KERN_WARNING "ELE784 ->count ");
 		}			
 	}else{
-		//printk(KERN_WARNING "");
+		printk(KERN_WARNING "ELE784 ->complete_callback: urb->status != 0");
 	}
 }
 
@@ -80,13 +107,12 @@ int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id){
 
 	if((iface_desc->desc.bInterfaceClass == CC_VIDEO) && 
 		(iface_desc->desc.bInterfaceSubClass == SC_VIDEOSTREAMING)){
+		usb_set_interface(dev,1,4);
+		usb_set_intfdata(intf, &(myStruct.intf));
+		myStruct.udev = kmalloc(sizeof(usb_device), GFP_KERNEL);
+		myStruct.udev = usb_get_dev(dev);
+		//init_completion(&UrbComplete);
 		usb_register_dev(intf,&class_driver);
-		usb_set_interface(dev,iface_desc->desc.bInterfaceNumber,0);
-		myStruct.udev = dev;
-		myStruct.endpointDesc = &(iface_desc->endpoint[0].desc);
-		myStruct.nbPackets = 40;
-		myStruct.nbUrbs = 5;
-		myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
 		printk(KERN_WARNING "ELE784 -> Probe:iface_desc->desc.bInterfaceNumber 0x%x\n", iface_desc->desc.bInterfaceNumber);
 
 	}
@@ -109,11 +135,27 @@ void ele784_disconnect(struct usb_interface *intf){
 	
 }
 
-ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos){
+static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos){
 	struct usb_interface *interface = filp->private_data;
-	//struct usb_device *udev = interface_to_usbdev(interface);
+	struct usb_device *udev = interface_to_usbdev(interface);
+	int i = 0;
+	unsigned int nbbyte=0;
+	unsigned int transferbyte=0;
 	printk(KERN_ALERT"ELE784 -> read \n\r");
-	return 0;
+
+	for (i=0;i<nbUrbs;i++){
+		wait_for_completion(&UrbComplete[i]);
+	}
+
+	nbbyte=raw_copy_to_user(buf, myData, myLengthUsed);
+	for(i=0;i<nbUrbs;i++){
+		usb_kill_urb(myUrb[i]);
+		usb_free_coherent(udev,myUrb[i]->transfer_buffer_length,myUrb[i]->transfer_buffer,myUrb[i]->transfer_dma);
+		usb_free_urb(myUrb[i]);
+	}
+	transferbyte=myLengthUsed-nbbyte;
+	printk(KERN_ALERT"ELE784 -> read %d \n\r",transferbyte);
+	return transferbyte;
 }
 
 int ele784_open(struct inode *inode, struct file *file){
@@ -132,29 +174,27 @@ int ele784_open(struct inode *inode, struct file *file){
 	return 0;
 
 }
-ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
+static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 	
-	/*struct usb_interface *intf = file->private_data;
-	struct usb_host_interface 	*iface_desc;
-	struct usb_device *dev = usb_get_intfdata(intf);
-	struct usb_endpoint_descriptor *endpointDesc;*/
+	struct usb_interface *intf = filp->private_data;
+	struct usb_host_interface 	*cur_altsetting;
+	struct usb_endpoint_descriptor endpointDesc;
 
+	struct usb_device *dev=interface_to_usbdev(intf);
+	int retval=0;
 	int j,i,ret=0;
 	static char Direction[4]={0};
-	__le16 myPacketSize;
-	unsigned int size;
+	int myPacketSize;
+	int size;
+	int nbPackets;
 
-	//iface_desc = intf->cur_altsetting;
-	//endpointDesc = &(iface_desc->endpoint[0].desc);
+	cur_altsetting = intf->cur_altsetting;
+	endpointDesc = cur_altsetting->endpoint[0].desc;
 
+	nbPackets=40;
+	myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
+	size = myPacketSize * nbPackets;
 
-	myPacketSize = le16_to_cpu(myStruct.endpointDesc->wMaxPacketSize);
-	size = myPacketSize * myStruct.nbPackets;
-
-
-
-
-	//printk(KERN_ALERT"ELE784 ->myPacketSize:%d myStruct.nbPackets:%d \n\r",myPacketSize,myStruct.nbPackets);
 	switch(cmd){
 	
 	case IOCTL_GET:
@@ -175,51 +215,45 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 		break;
 	case IOCTL_GRAB:
 		printk(KERN_ALERT"ELE784 -> IOCTL_GRAB \n\r");
+		myLengthUsed=0;
+		myLength=42666;
+		for (i = 0; i < nbUrbs; ++i) {
+		  usb_free_urb(myUrb[i]); // Pour être certain
+		  myUrb[i] = usb_alloc_urb(nbPackets,GFP_KERNEL);
 
-		for (i = 0; i < myStruct.nbUrbs; ++i) {
-		  usb_free_urb(myStruct.myUrb[i]); // Pour être certain
-		  myStruct.myUrb[i] = usb_alloc_urb(sizeof(struct urb),GFP_KERNEL);
-		  printk(KERN_ALERT"ELE784 ->  myUrb[i]transfer_dma: %llu \n\r",(myStruct.myUrb[i]->transfer_dma));
-		  printk(KERN_ALERT"ELE784 ->  myUrb[i]transfer_dma add: %p \n\r",&(myStruct.myUrb[i]->transfer_dma));
-		//  printk(KERN_ALERT"ELE784 ->  myUrb[i]myStruct.udev add: %p \n\r",(void *)(myStruct.udev));
-		/*  printk(KERN_ALERT"ELE784 ->  myUrb[i]myPacketSize: %d \n\r",myStruct.myPacketSize);
-		  printk(KERN_ALERT"ELE784 ->  myUrb[i]sizeof(size_t): %ld \n\r",sizeof(size_t));*/
-		  printk(KERN_ALERT"ELE784 ->  sizeof(myPacketSize): %ld \n\r",sizeof(myPacketSize));
-
-		  if (&(myStruct.myUrb[i]) == NULL) {
+		  if (&(myUrb[i]) == NULL) {
 		    //printk(KERN_WARNING "");		
 		    return -ENOMEM;
 		  }
+		  myUrb[i]->transfer_buffer = usb_alloc_coherent(dev,size,GFP_KERNEL,&(myUrb[i]->transfer_dma));
 
-		  myStruct.myUrb[i]->transfer_buffer = usb_alloc_coherent(myStruct.udev,sizeof(myPacketSize),GFP_KERNEL,&(myStruct.myUrb[i]->transfer_dma));
-
-		  if (&(myStruct.myUrb[i]->transfer_buffer) == NULL) {
+		  if (&(myUrb[i]->transfer_buffer) == NULL) {
 		    //printk(KERN_WARNING "");		
-		    usb_free_urb(myStruct.myUrb[i]);
+		    usb_free_urb(myUrb[i]);
 		    return -ENOMEM;
 		  }
 
-		  myStruct.myUrb[i]->dev = myStruct.udev;
-		  myStruct.myUrb[i]->context = myStruct.udev;
-		  myStruct.myUrb[i]->pipe = usb_rcvisocpipe(myStruct.udev, 0);
-		  myStruct.myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
-		 // myStruct.myUrb[i]->interval = myStruct.endpointDesc->bInterval;
-		  myStruct.myUrb[i]->complete = complete_callback;
-		  myStruct.myUrb[i]->number_of_packets = myStruct.nbPackets;
-		  //myStruct.myUrb[i]->transfer_buffer_length = size;
+		  myUrb[i]->dev = dev;
+		  myUrb[i]->context = &UrbComplete[i];
+		  myUrb[i]->pipe = usb_rcvisocpipe(dev, endpointDesc.bEndpointAddress);
+		  myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
+		  myUrb[i]->interval = endpointDesc.bInterval;
+		  myUrb[i]->complete = complete_callback;
+		  myUrb[i]->number_of_packets = nbPackets;
+		  myUrb[i]->transfer_buffer_length = size;
 
-		/*  for (j = 0; j < myStruct.nbPackets; ++j) {
-		    myStruct.myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
-		    myStruct.myUrb[i]->iso_frame_desc[j].length = myPacketSize;
-		  }	*/							
+		  for (j = 0; j < nbPackets; ++j) {
+		    myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
+		    myUrb[i]->iso_frame_desc[j].length = myPacketSize;
+		  }								
 		}
 
-		/*for(i = 0; i < myStruct.nbUrbs; i++){
-		  if ((ret = usb_submit_urb( myStruct.myUrb[i],GFP_KERNEL)) < 0) {
-		    //printk(KERN_WARNING "");		
+		for(i = 0; i < nbUrbs; i++){
+		  if ((ret = usb_submit_urb(myUrb[i],GFP_KERNEL)) < 0) {
+		    printk(KERN_ALERT "ELE784 -> usb_submit_urb ERROR");		
 		    return ret;
 		  }
-		}*/
+		}
 
 		
 		break;
@@ -262,9 +296,9 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 		Direction[2]=0x00;
 		Direction[1]=0x00;
 		Direction[0]=0x03;
-		usb_control_msg(myStruct.udev,usb_sndctrlpipe(myStruct.udev,0),TILT_RESET,
+		retval=usb_control_msg(myStruct.udev,usb_sndctrlpipe(myStruct.udev,0),TILT_REQUEST,
 				USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,0x0200,0x0900,Direction,sizeof(char),0);
-		printk(KERN_ALERT"ELE784 -> IOCTL_PANTILT_RESEST \n\r");
+		printk(KERN_ALERT"ELE784 -> IOCTL_PANTILT_RESEST  %d \n\r",retval);
 		break;
 
 	default: 
@@ -272,7 +306,6 @@ ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args){
 	
 	}
 
-	printk(KERN_ALERT"ELE784 -> ioctl \n\r");
 	
 	return 0;
 }
