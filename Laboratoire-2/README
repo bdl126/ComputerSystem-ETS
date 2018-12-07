@@ -1,0 +1,20 @@
+Le repertoire example n'est pas utile dans le laboratoire
+
+Le repertoire usbDriver contient le pilote
+	-drv.c contient les fonctions principal
+	-drv.h contient la definition de divers structure pour le pilote
+	-ioctlcmd.h contient les definitions des commande utile pour IOCTL
+	-usbvideo.h contient les definitions de base de la classe usbvideo
+	-Le fichier inscam est un script qui retire uvcvideo et install le pilote
+
+le repertoire userapp contient l'application de l'usager
+	-le repertoire source contient les fichier de l'application usager
+		-userapp.c contient le fonctionnement principal de l'application usager
+		-Display.c contient la fonction d'affichage de la commande d'aide de l'application usager
+
+
+
+
+**lors d'une lecture avec l'application usager une photo est generer dans le repertoire userapp/Debug/ ***
+
+

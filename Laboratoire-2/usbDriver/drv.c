@@ -296,7 +296,7 @@ static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, lo
 	}
 
 	for (i=0;i<nbUrbs;i++){
-		init_completion(&UrbComplete[i]);
+		reinit_completion(&UrbComplete[i]);
 	}
 	printk(KERN_ALERT"ELE784 -> read myLengthUsed:%d \n\r",myLengthUsed);
 	return myLengthUsed;

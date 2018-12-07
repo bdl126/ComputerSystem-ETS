@@ -66,11 +66,8 @@ static struct usb_class_driver class_driver = {
 };
 
 struct my_usb_struct {
-   struct usb_device *udev;	     /* the usb device for this device */
-   struct usb_endpoint_descriptor endpointDesc;
-   unsigned short myPacketSize;
-   size_t size;	
-	struct usb_interface intf;
+   struct usb_device *udev;	     /* the usb device for this device */	
+   struct usb_interface intf;
 
 };
 
