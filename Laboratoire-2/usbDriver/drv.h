@@ -39,9 +39,9 @@ static void __exit pilote_exit (void);
 
 static int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id);
 static void ele784_disconnect(struct usb_interface *intf);
+static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
 static int ele784_open(struct inode *inode, struct file *filp);
 static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long args);
-static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
 
 
 static struct usb_driver udriver ={
@@ -54,9 +54,9 @@ static struct usb_driver udriver ={
 
 static struct file_operations fops = {
 	.owner 		=	THIS_MODULE,
-	.read 		=	ele784_read,
 	.open 		=	ele784_open,
 	.unlocked_ioctl	= 	ele784_ioctl,
+	.read 		=	ele784_read,
 };
 
 static struct usb_class_driver class_driver = {

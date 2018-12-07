@@ -52,41 +52,23 @@ int main(void) {
 				case 'r':
 					foutput = fopen("fichier.jpg", "wb");
 					if(foutput != NULL){
+
 						// Etape #2
-						printf ("IOCTL_STREAMON\n");
-						if((ioctl(fd,IOCTL_STREAMON))<0){
-							printf("ERROR: %s\n", strerror(errno));
-						}
-						else{
-							printf ("done\n");
-						}
+						ioctl(fd,IOCTL_STREAMON);
+
 						// Etape #3
-						printf("IOCTL_GRAB\n");
-						if((ioctl(fd,IOCTL_GRAB))<0){
-							printf("ERROR: %s\n", strerror(errno));
-						}
-						else{
-							printf ("done\n");
-						}
-						break;
+						ioctl(fd,IOCTL_GRAB);
 						// Etape #4
 						mySize=read(fd,inBuffer,42666);
 						if(mySize<0){
 							printf("ERROR: %s\n", strerror(errno));
 						}
 						else{
-							printf ("done\n");
+							printf ("read done\n");
 						}
 						// Etape #5
+						ioctl(fd,IOCTL_STREAMOFF);
 
-
-						printf ("IOCTL_STREAMOFF\n");
-						if((ioctl(fd,IOCTL_STREAMOFF))<0){
-							printf("ERROR: %s\n", strerror(errno));
-						}
-						else{
-							printf ("done\n");
-						}
 						memcpy (finalBuf, inBuffer, HEADERFRAME1);
 						memcpy (finalBuf + HEADERFRAME1, dht_data, DHT_SIZE);
 						memcpy (finalBuf + HEADERFRAME1 + DHT_SIZE,inBuffer + HEADERFRAME1,(mySize -HEADERFRAME1));

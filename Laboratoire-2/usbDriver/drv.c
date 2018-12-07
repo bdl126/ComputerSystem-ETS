@@ -7,14 +7,11 @@ MODULE_LICENSE("Dual BSD/GPL");
 unsigned int myStatus=0;
 unsigned int myLength=42666;
 unsigned int myLengthUsed=0;
-char * myData;
+unsigned char * myData;
 struct completion UrbComplete[5];
 struct	my_usb_struct myStruct;
-struct usb_interface tata;
 struct urb *myUrb[5];
 int nbUrbs =5;
-//wait_queue_head_t UrbComplete;
-
 
 module_init(pilote_init);
 module_exit(pilote_exit);
@@ -26,8 +23,7 @@ static int __init pilote_init (void) {
 	for(i=0;i<5;i++){
 		init_completion(&(UrbComplete[i]));
 	}
-	//init_waitqueue_head(&UrbComplete);
-	myData=kmalloc(sizeof(char)*myLength, GFP_KERNEL);
+	myData=kmalloc(sizeof(unsigned char)*myLength, GFP_KERNEL);
 	result= usb_register(&udriver);
 	printk(KERN_WARNING "ELE784 -> pilote_init \n");
 
@@ -89,10 +85,9 @@ static void complete_callback(struct urb *urb){
 			}
 		}else{
 			complete(urb->context);
-			printk(KERN_WARNING "ELE784 ->count ");
 		}			
 	}else{
-		printk(KERN_WARNING "ELE784 ->complete_callback: urb->status != 0");
+		printk(KERN_WARNING "ELE784 ->complete_callback: urb->status = %d ",urb->status);
 	}
 }
 
@@ -111,7 +106,6 @@ int ele784_probe(struct usb_interface *intf, const struct usb_device_id *id){
 		usb_set_intfdata(intf, &(myStruct.intf));
 		myStruct.udev = kmalloc(sizeof(usb_device), GFP_KERNEL);
 		myStruct.udev = usb_get_dev(dev);
-		//init_completion(&UrbComplete);
 		usb_register_dev(intf,&class_driver);
 		printk(KERN_WARNING "ELE784 -> Probe:iface_desc->desc.bInterfaceNumber 0x%x\n", iface_desc->desc.bInterfaceNumber);
 
@@ -135,28 +129,7 @@ void ele784_disconnect(struct usb_interface *intf){
 	
 }
 
-static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos){
-	struct usb_interface *interface = filp->private_data;
-	struct usb_device *udev = interface_to_usbdev(interface);
-	int i = 0;
-	unsigned int nbbyte=0;
-	unsigned int transferbyte=0;
-	printk(KERN_ALERT"ELE784 -> read \n\r");
 
-	for (i=0;i<nbUrbs;i++){
-		wait_for_completion(&UrbComplete[i]);
-	}
-
-	nbbyte=raw_copy_to_user(buf, myData, myLengthUsed);
-	for(i=0;i<nbUrbs;i++){
-		usb_kill_urb(myUrb[i]);
-		usb_free_coherent(udev,myUrb[i]->transfer_buffer_length,myUrb[i]->transfer_buffer,myUrb[i]->transfer_dma);
-		usb_free_urb(myUrb[i]);
-	}
-	transferbyte=myLengthUsed-nbbyte;
-	printk(KERN_ALERT"ELE784 -> read %d \n\r",transferbyte);
-	return transferbyte;
-}
 
 int ele784_open(struct inode *inode, struct file *file){
 
@@ -180,7 +153,7 @@ static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	struct usb_host_interface 	*cur_altsetting;
 	struct usb_endpoint_descriptor endpointDesc;
 
-	struct usb_device *dev=interface_to_usbdev(intf);
+	struct usb_device *dev = interface_to_usbdev(intf);
 	int retval=0;
 	int j,i,ret=0;
 	static char Direction[4]={0};
@@ -197,12 +170,6 @@ static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
 	switch(cmd){
 	
-	case IOCTL_GET:
-		printk(KERN_ALERT"ELE784 -> IOCTL_GET \n\r");
-		break;
-	case IOCTL_SET:
-		printk(KERN_ALERT"ELE784 -> IOCTL_SET \n\r");
-		break;
 	case IOCTL_STREAMON:
 		printk(KERN_ALERT"ELE784 -> IOCTL_STREAMON  \n\r");
 		usb_control_msg(myStruct.udev, usb_sndctrlpipe(myStruct.udev,0) ,STREAM_REQUEST,
@@ -215,8 +182,7 @@ static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 		break;
 	case IOCTL_GRAB:
 		printk(KERN_ALERT"ELE784 -> IOCTL_GRAB \n\r");
-		myLengthUsed=0;
-		myLength=42666;
+		myLengthUsed = 0;
 		for (i = 0; i < nbUrbs; ++i) {
 		  usb_free_urb(myUrb[i]); // Pour être certain
 		  myUrb[i] = usb_alloc_urb(nbPackets,GFP_KERNEL);
@@ -310,4 +276,29 @@ static ssize_t ele784_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	return 0;
 }
 
+static ssize_t ele784_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos){
+	struct usb_interface *interface = filp->private_data;
+	struct usb_device *udev = interface_to_usbdev(interface);
+	int i = 0;
+	printk(KERN_ALERT"ELE784 -> read \n\r");
+	
+
+	for (i=0;i<nbUrbs;i++){
+		wait_for_completion(&UrbComplete[i]);
+		printk(KERN_ALERT"ELE784 -> read i completion:%d \n\r",i);
+	}
+	myStatus = 0;
+	raw_copy_to_user(buf, myData, myLengthUsed);
+	for(i=0;i<nbUrbs;i++){
+		usb_kill_urb(myUrb[i]);
+		usb_free_coherent(udev,myUrb[i]->transfer_buffer_length,myUrb[i]->transfer_buffer,myUrb[i]->transfer_dma);
+		usb_free_urb(myUrb[i]);
+	}
+
+	for (i=0;i<nbUrbs;i++){
+		init_completion(&UrbComplete[i]);
+	}
+	printk(KERN_ALERT"ELE784 -> read myLengthUsed:%d \n\r",myLengthUsed);
+	return myLengthUsed;
+}
 
